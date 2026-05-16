@@ -1,0 +1,25 @@
+# Editor / tool state
+.claude/
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+*.egg-info/
+
+# Env files (never commit secrets — see .env.example)
+.env
+*.env.local
+
+# Node (for v1/frontend later)
+node_modules/
+.next/

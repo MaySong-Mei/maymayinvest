@@ -1,0 +1,29 @@
+[importlinter]
+root_packages =
+    app
+
+[importlinter:contract:strategy_purity]
+name = Strategy layer must not import engine or backtest
+type = forbidden
+source_modules =
+    app.strategy
+forbidden_modules =
+    app.backtest
+    app.engine
+    app.brokers
+    app.persistence
+    app.api
+
+[importlinter:contract:domain_purity]
+name = Domain layer is pure (no I/O dependencies)
+type = forbidden
+source_modules =
+    app.domain
+forbidden_modules =
+    app.persistence
+    app.api
+    app.brokers
+    app.data
+    app.engine
+    app.backtest
+    app.operator

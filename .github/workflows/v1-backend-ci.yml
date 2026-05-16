@@ -1,0 +1,44 @@
+name: v1-backend-ci
+
+on:
+  pull_request:
+    paths: ["v1/backend/**", ".github/workflows/v1-backend-ci.yml"]
+  push:
+    branches: [master]
+    paths: ["v1/backend/**", ".github/workflows/v1-backend-ci.yml"]
+
+defaults:
+  run:
+    working-directory: v1/backend
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install minimal deps (skips vectorbt/alpaca-py for speed)
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            "pydantic>=2.8" "pydantic-settings>=2.5" \
+            "structlog>=24.4" "sqlalchemy>=2.0" \
+            "prometheus-client>=0.20" "fastapi>=0.115" \
+            "pytest>=8.3" "pytest-asyncio>=0.24" \
+            "ruff>=0.6" "mypy>=1.11" "import-linter>=2.0"
+
+      - name: ruff
+        run: ruff check app tests
+
+      - name: import-linter contracts
+        run: lint-imports --config .importlinter
+
+      - name: mypy
+        run: mypy app
+
+      - name: pytest
+        run: pytest tests/unit -q
