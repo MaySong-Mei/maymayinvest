@@ -112,7 +112,7 @@ def upgrade() -> None:
         sa.Column("symbol", sa.String(32), nullable=False),
         sa.Column("ex_date", sa.TIMESTAMP(timezone=True), nullable=False),
         sa.Column("kind", sa.String(16), nullable=False),
-        sa.Column("payload", postgresql.JSONB, nullable=False),
+        sa.Column("payload", sa.JSON, nullable=False),
         sa.UniqueConstraint("symbol", "ex_date", "kind", name="ux_ca_sym_date_kind"),
     )
 
@@ -122,10 +122,10 @@ def upgrade() -> None:
         sa.Column("actor_id", sa.String(64), nullable=False),
         sa.Column("actor_type", sa.String(16), nullable=False),
         sa.Column("capability", sa.String(64), nullable=False),
-        sa.Column("intent", postgresql.JSONB, nullable=False),
+        sa.Column("intent", sa.JSON, nullable=False),
         sa.Column("reasoning", sa.Text, nullable=True),
         sa.Column("outcome_status", sa.String(16), nullable=False),
-        sa.Column("outcome", postgresql.JSONB, nullable=True),
+        sa.Column("outcome", sa.JSON, nullable=True),
         sa.Column("error", sa.Text, nullable=True),
         sa.Column("ts", sa.TIMESTAMP(timezone=True), nullable=False),
     )
@@ -143,10 +143,12 @@ def upgrade() -> None:
         sa.Column("volume", MONEY, nullable=False, server_default="0"),
         sa.PrimaryKeyConstraint("symbol", "ts"),
     )
-    # Convert bars_1d to a TimescaleDB hypertable.
-    op.execute(
-        "SELECT create_hypertable('bars_1d', 'ts', if_not_exists => TRUE, migrate_data => TRUE);"
-    )
+    # Convert bars_1d to a TimescaleDB hypertable (Postgres+Timescale only).
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute(
+            "SELECT create_hypertable('bars_1d', 'ts', if_not_exists => TRUE, migrate_data => TRUE);"
+        )
 
 
 def downgrade() -> None:

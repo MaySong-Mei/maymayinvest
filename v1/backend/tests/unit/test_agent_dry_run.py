@@ -19,10 +19,14 @@ from app.operator.registry import capability, registry
 class _FakeSession:
     def __init__(self):
         self.inserts: list[Any] = []
+        self.commits = 0
 
     async def execute(self, stmt):
         self.inserts.append(stmt)
         return None
+
+    async def commit(self):
+        self.commits += 1
 
 
 @dataclass
@@ -82,6 +86,36 @@ def test_agent_call_with_execute_true_runs(caps):
         result = await func(ctx, intent, execute=True)
         assert result["executed"] is True
         assert captured.real_calls == 1
+
+    asyncio.run(run())
+
+
+def test_agent_call_without_reasoning_is_denied_and_audited(caps):
+    """Denial path must commit the audit row before raising — otherwise the
+    session rollback in FastAPI's db dep wipes it (real bug we hit in
+    selftest_api.py)."""
+    func, captured = caps
+
+    async def run():
+        from app.operator.registry import CapabilityDenied
+
+        session = _FakeSession()
+        ctx = OperatorContext(
+            actor_id="claude",
+            actor_type="agent",
+            session=session,
+            reasoning=None,  # missing — triggers denial
+        )
+        intent = OrderIntent(symbol="AAPL", side=OrderSide.BUY, qty=Decimal("1"))
+        raised = False
+        try:
+            await func(ctx, intent)
+        except CapabilityDenied:
+            raised = True
+        assert raised, "expected CapabilityDenied"
+        assert captured.real_calls == 0
+        assert len(session.inserts) == 1, "denial must write one audit row"
+        assert session.commits == 1, "denial must commit the audit before raising"
 
     asyncio.run(run())
 

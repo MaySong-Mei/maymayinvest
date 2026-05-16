@@ -54,8 +54,10 @@ def _build_handler(cap_name: str):
         handler.__name__ = f"op_{cap_name}"
         return handler
 
-    async def handler(  # type: ignore[no-redef,valid-type]
-        payload: InputModel,  # type: ignore[valid-type]
+    # Bind the input model into the handler's annotation via assignment so
+    # FastAPI's dependency analyzer sees a real type, not a closure variable.
+    async def handler(  # type: ignore[no-redef]
+        payload,
         session: AsyncSession = Depends(db_session),
         identity: Identity = Depends(get_identity),
         x_reasoning: str | None = Header(default=None),
@@ -75,6 +77,10 @@ def _build_handler(cap_name: str):
         except CapabilityDenied as e:
             raise HTTPException(status_code=403, detail=e.reason) from e
         return _serialize(result)
+
+    # FastAPI introspects function annotations to wire request body parsing.
+    # Setting it dynamically keeps the closure-bound InputModel as the real type.
+    handler.__annotations__["payload"] = InputModel
 
     handler.__name__ = f"op_{cap_name}"
     return handler

@@ -7,3 +7,6 @@ __pycache__/
 .mypy_cache/
 dist/
 *.egg-info/
+# dev/test SQLite databases — Phase 1 uses Postgres+Timescale in prod
+*.db
+*.db-journal

@@ -30,9 +30,14 @@ class CapabilityDenied(Exception):
 
 @dataclass
 class CapabilitySpec:
+    """`func` is the protected wrapper (REST + agent dispatch).
+    `raw` is the undecorated function, kept for direct unit-test access.
+    """
+
     name: str
     category: Category
     func: Callable[..., Awaitable[Any]]
+    raw: Callable[..., Awaitable[Any]]
     input_model: type[BaseModel] | None
     output_model: type | None
     max_calls_per_minute: int | None = None
@@ -62,11 +67,16 @@ registry = Registry()
 
 
 def _primary_input_model(func) -> type[BaseModel] | None:
+    # `from __future__ import annotations` makes annotations strings; resolve.
+    try:
+        annotations = inspect.get_annotations(func, eval_str=True)
+    except Exception:
+        annotations = getattr(func, "__annotations__", {})
     sig = inspect.signature(func)
     for p in sig.parameters.values():
         if p.name in ("ctx", "execute"):
             continue
-        ann = p.annotation
+        ann = annotations.get(p.name, p.annotation)
         if inspect.isclass(ann) and issubclass(ann, BaseModel):
             return ann
     return None
@@ -128,10 +138,13 @@ def capability(
 
     def deco(func: Callable[..., Awaitable[Any]]):
         ret = inspect.signature(func).return_annotation
+        # spec is created first with a placeholder `func`; we patch it to the
+        # wrapper at the end so the registry exposes the protected entrypoint.
         spec = CapabilitySpec(
             name=name or func.__name__,
             category=category,
-            func=func,
+            func=func,  # patched below
+            raw=func,
             input_model=_primary_input_model(func),
             output_model=ret if ret is not inspect.Signature.empty else None,
             max_calls_per_minute=max_calls_per_minute,
@@ -154,6 +167,7 @@ def capability(
             if ctx.actor_type in spec.requires_reasoning_for and not (ctx.reasoning or "").strip():
                 err = f"{spec.name} requires non-empty reasoning for actor_type={ctx.actor_type}"
                 await _audit(ctx, spec, intent_payload, "denied", None, err)
+                await ctx.session.commit()  # keep denial audit even though we raise
                 raise CapabilityDenied(err)
 
             if spec.max_calls_per_minute is not None:
@@ -164,6 +178,7 @@ def capability(
                         f"for actor={ctx.actor_id}"
                     )
                     await _audit(ctx, spec, intent_payload, "denied", None, err)
+                    await ctx.session.commit()  # keep denial audit even though we raise
                     raise CapabilityDenied(err)
 
             notional = _intent_notional(args[0]) if args else Decimal("0")
@@ -175,6 +190,7 @@ def capability(
                         f"({total} > {spec.max_notional_per_day}) for actor={ctx.actor_id}"
                     )
                     await _audit(ctx, spec, intent_payload, "denied", None, err)
+                    await ctx.session.commit()  # keep denial audit even though we raise
                     raise CapabilityDenied(err)
 
             dry_run = ctx.actor_type in spec.dry_run_default_for and not execute
@@ -210,6 +226,7 @@ def capability(
 
         wrapper.__capability_spec__ = spec  # type: ignore[attr-defined]
         wrapper.__name__ = spec.name
+        spec.func = wrapper  # registry now exposes the protected wrapper
         return wrapper
 
     return deco
