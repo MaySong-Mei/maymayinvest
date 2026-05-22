@@ -138,6 +138,25 @@ class Bar1d(Base):
     volume: Mapped[Decimal] = mapped_column(MONEY, default=Decimal("0"))
 
 
+# ---------- events (perception layer) ----------
+# Append-only. Writes go through app.persistence.repositories.events.
+# external_id is the source-canonical dedupe key.
+
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    kind: Mapped[str] = mapped_column(String(32))
+    external_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    ts: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    ingested_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    source: Mapped[str] = mapped_column(String(32))
+    symbols: Mapped[list] = mapped_column(JSON, default=list)
+    headline: Mapped[str] = mapped_column(Text)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
 # ---------- decision dossier / reviewer / llm trace ----------
 # All append-only. Writes go through app.persistence.repositories.decisions —
 # no direct ORM session exposure outside that module for these tables.

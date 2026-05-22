@@ -27,3 +27,16 @@ forbidden_modules =
     app.engine
     app.backtest
     app.operator
+
+[importlinter:contract:analyzer_isolation]
+name = Analyzer must not bypass AnalyzerContext (no direct I/O imports)
+type = forbidden
+source_modules =
+    app.intel.analyzer
+forbidden_modules =
+    app.persistence
+    app.brokers
+    app.data
+    app.engine
+    app.operator
+    app.api
