@@ -136,3 +136,88 @@ class Bar1d(Base):
     low: Mapped[Decimal] = mapped_column(MONEY)
     close: Mapped[Decimal] = mapped_column(MONEY)
     volume: Mapped[Decimal] = mapped_column(MONEY, default=Decimal("0"))
+
+
+# ---------- decision dossier / reviewer / llm trace ----------
+# All append-only. Writes go through app.persistence.repositories.decisions —
+# no direct ORM session exposure outside that module for these tables.
+
+
+class Decision(Base):
+    """A DecisionDossier persisted. See app.domain.decision.DecisionDossier
+    for the shape of `available_info_snapshot`, `alternatives_considered`,
+    `skills_invoked`, and `proposed`.
+
+    Append-only at the application layer (no UPDATE/DELETE through repos).
+    """
+
+    __tablename__ = "decisions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    actor_id: Mapped[str] = mapped_column(String(64))
+    actor_type: Mapped[str] = mapped_column(String(16))  # "agent" | "user"
+
+    event_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    event_kind: Mapped[str] = mapped_column(String(32))
+    event_summary: Mapped[str] = mapped_column(Text)
+
+    available_info_snapshot: Mapped[dict] = mapped_column(JSON)
+    reasoning_chain: Mapped[str] = mapped_column(Text)
+    alternatives_considered: Mapped[list] = mapped_column(JSON, default=list)
+    confidence: Mapped[Decimal] = mapped_column(MONEY)
+    skills_invoked: Mapped[list] = mapped_column(JSON, default=list)
+
+    proposed: Mapped[dict] = mapped_column(JSON)
+
+    mode: Mapped[str] = mapped_column(String(16), default="dry_run")
+    latency_ms: Mapped[int] = mapped_column(BigInteger, default=0)
+
+
+class Review(Base):
+    """Reviewer's judgment on a Decision. Outcome-blind by construction
+    (see app.persistence.repositories.decisions.build_reviewer_input).
+
+    Append-only at the application layer.
+    """
+
+    __tablename__ = "reviews"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    decision_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("decisions.id"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    reviewer_id: Mapped[str] = mapped_column(String(64))
+    reviewer_prompt_version: Mapped[str] = mapped_column(String(32))
+
+    verdict: Mapped[str] = mapped_column(String(16))  # "right_bet" | "wrong_bet" | "ambiguous"
+    reasoning: Mapped[str] = mapped_column(Text)
+    flags: Mapped[list] = mapped_column(JSON, default=list)
+    confidence: Mapped[Decimal] = mapped_column(MONEY)
+
+
+class LlmCallLog(Base):
+    """One row per LLM invocation. Linked to a decision OR a review, not both.
+
+    Append-only at the application layer.
+    """
+
+    __tablename__ = "llm_calls"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    decision_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("decisions.id"), index=True, nullable=True
+    )
+    review_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("reviews.id"), index=True, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    purpose: Mapped[str] = mapped_column(String(64))
+    model: Mapped[str] = mapped_column(String(64))
+    prompt: Mapped[str] = mapped_column(Text)
+    response: Mapped[str] = mapped_column(Text)
+    input_tokens: Mapped[int] = mapped_column(BigInteger, default=0)
+    output_tokens: Mapped[int] = mapped_column(BigInteger, default=0)
+    latency_ms: Mapped[int] = mapped_column(BigInteger, default=0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
