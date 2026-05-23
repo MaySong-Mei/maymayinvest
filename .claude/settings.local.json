@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git remote*)",
+      "Bash(git fetch*)",
+      "Bash(git ls-remote*)",
+      "Bash(git worktree list*)",
+      "Bash(git rev-parse*)",
+      "Bash(git merge-base*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+
+      "Bash(*/python.exe -m pytest*)",
+      "Bash(*/python.exe -m alembic*)",
+      "Bash(*/python.exe -m pip install*)",
+      "Bash(*/python.exe scripts/*)",
+      "Bash(*/python.exe -c *)",
+      "Bash(*/python.exe --version)",
+      "Bash(*/lint-imports.exe*)",
+      "Bash(*/ruff.exe*)",
+      "Bash(*/mypy.exe*)",
+
+      "Bash(npm install*)",
+      "Bash(npm run *)",
+      "Bash(npm ci*)",
+      "Bash(npx *)",
+
+      "Bash(gh pr view*)",
+      "Bash(gh pr list*)",
+      "Bash(gh run view*)",
+      "Bash(gh run list*)",
+      "Bash(gh repo view*)",
+      "Bash(gh api*)",
+
+      "Bash(ls*)",
+      "Bash(pwd)"
+    ]
+  }
+}

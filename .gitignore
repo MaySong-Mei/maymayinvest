@@ -1,5 +1,9 @@
 # Editor / tool state
-.claude/
+# Ignore .claude contents but keep settings.local.json (it's project-shared
+# permission config; see https://docs.claude.com/en/docs/claude-code/settings).
+# Git won't traverse an ignored directory, so we ignore by glob instead of dir.
+.claude/*
+!.claude/settings.local.json
 .idea/
 .vscode/
 *.swp
