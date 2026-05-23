@@ -1,0 +1,20 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. Third CLASS 2 (clearly actionable, positive) fixture in the corpus diversity plan. Mid-large cap industrial company announces acquisition of a smaller strategic competitor; from the acquirer's perspective so this is a clear positive catalyst (synergies + market share + accretive deal math) without being a partnership (soft, multi-quarter) or contract win (one-time revenue). Sized to be meaningful to acquirer EPS but not transformative. Designed to test whether the K=6 'disagreement specific to clearly-positive catalysts' hypothesis holds on a third class-2 instance. Ticker, company, deal details illustrative; structure paraphrases how 8-K Item 1.01 acquisition announcements typically appear. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0004128376",
+    "name": "Northwind Industrial Group Inc.",
+    "ticker": "NWIG"
+  },
+  "filed_at": "2024-09-10T07:30:00-04:00",
+  "accepted_at": "2024-09-10T07:30:19-04:00",
+  "items": ["1.01 Entry into a Material Definitive Agreement", "2.02 Results of Operations and Financial Condition", "7.01 Regulation FD Disclosure", "9.01 Financial Statements and Exhibits"],
+  "headline": "Northwind Industrial Group announces definitive agreement to acquire Sterling Flow Systems for $3.4 billion in cash; transaction expected to be immediately accretive to non-GAAP EPS",
+  "body": "Northwind Industrial Group Inc. (NYSE: NWIG) today announced it has entered into a definitive agreement to acquire Sterling Flow Systems, a privately-held provider of precision fluid-handling equipment for industrial automation applications, for $3.4 billion in cash. The transaction has been unanimously approved by the boards of directors of both companies and is expected to close in the first quarter of 2025, subject to customary closing conditions and regulatory approvals. Sterling generated approximately $720 million in revenue and $145 million in adjusted EBITDA in calendar 2023. Northwind expects the transaction to deliver approximately $85 million in annual run-rate cost synergies by year three, primarily through supply-chain consolidation, manufacturing footprint optimization, and SG&A reduction. The Company anticipates the acquisition will be immediately accretive to its non-GAAP diluted earnings per share upon closing and accretive by approximately $0.45 per share on a full-year run-rate basis once synergies are realized. The transaction will be funded through a combination of $1.8 billion in committed bridge financing, $800 million in available cash, and the issuance of approximately $800 million in new senior unsecured notes. The Company expects pro-forma net leverage of approximately 2.7x at closing, declining to approximately 2.0x within 18 months through free-cash-flow generation. Northwind reaffirms its previously issued full-year 2024 standalone guidance and will host a conference call this morning at 8:30 a.m. ET to discuss the transaction.",
+  "exhibits": [
+    {"type": "EX-2.1", "description": "Agreement and Plan of Merger dated September 10, 2024"},
+    {"type": "EX-99.1", "description": "Press release dated September 10, 2024"},
+    {"type": "EX-99.2", "description": "Investor presentation"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0004128376&type=8-K"
+}
