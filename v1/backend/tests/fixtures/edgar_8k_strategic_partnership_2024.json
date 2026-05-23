@@ -1,0 +1,19 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. Material strategic partnership — second CLASS 2 (clearly actionable) fixture in the determinism corpus diversity plan; complements edgar_8k_material_contract_win_2024.json by testing analyzer behavior on a softer/multi-quarter positive catalyst (partnership vs single-contract). Ticker, counterparty, and figures are illustrative; structure paraphrases how 8-K Item 1.01 partnership announcements typically appear. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0001234567",
+    "name": "CloudSync Networks Inc.",
+    "ticker": "CSNI"
+  },
+  "filed_at": "2024-10-08T07:00:00-04:00",
+  "accepted_at": "2024-10-08T07:00:18-04:00",
+  "items": ["1.01 Entry into a Material Definitive Agreement", "7.01 Regulation FD Disclosure", "9.01 Financial Statements and Exhibits"],
+  "headline": "CloudSync Networks enters multi-year strategic partnership with Microsoft Azure to co-develop edge data orchestration platform",
+  "body": "CloudSync Networks Inc. (NASDAQ: CSNI) today announced it has entered into a multi-year strategic partnership agreement with Microsoft Corporation to jointly develop and bring to market an edge data orchestration platform integrating CloudSync's proprietary streaming engine with Microsoft Azure infrastructure. Under the agreement, Microsoft will commit minimum platform spending of $40 million in calendar 2025 and $75 million in calendar 2026, with additional volume-based commitments tied to enterprise customer adoption milestones. CloudSync will be designated a preferred Azure partner in the data infrastructure category and will gain co-sell access to Microsoft's enterprise field organization, which the Company believes will materially accelerate its go-to-market motion in regulated industries. The Company expects the partnership to be modestly accretive to fiscal 2025 revenue (5-8% uplift to current consensus) and to drive meaningful gross margin expansion in fiscal 2026 as joint deal flow scales. The agreement has an initial term of five years with mutual extension options. Management will host an investor conference call to discuss the partnership today at 8:30 a.m. ET.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated October 8, 2024"},
+    {"type": "EX-10.1", "description": "Strategic Partnership Agreement (redacted, filed under confidential treatment request)"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001234567&type=8-K"
+}
