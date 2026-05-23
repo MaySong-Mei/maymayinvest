@@ -1,18 +1,23 @@
-#!/usr/bin/env python3
-"""Pre-commit hook enforcing the Append-only operator invariant.
+#!/usr/bin/env python
+"""commit-msg hook enforcing the Append-only operator invariant.
+
+Git invokes this hook AFTER the commit message is written (whether
+via -m or editor), passing the message file path as argv[1]. This
+is the correct hook for message-aware checks; pre-commit runs before
+the message exists.
 
 See v1/docs/PHILOSOPHY.md "Append-only operator invariant" for the
 six rules. This hook is the mechanical enforcement layer.
 
 Install:
-  cp v1/backend/scripts/git-hooks/pre-commit .git/hooks/pre-commit
-  chmod +x .git/hooks/pre-commit
+  cp v1/backend/scripts/git-hooks/commit-msg .git/hooks/commit-msg
+  chmod +x .git/hooks/commit-msg
 
 Behavior:
   - Reads the staged diff (git diff --cached).
+  - Reads the commit message from sys.argv[1] (file path passed by git).
   - Detects modifications (vs adds-only) in the review-required surface.
-  - Detects "lock/binding/recount/void/invalidate" keywords in commit
-    message (read from .git/COMMIT_EDITMSG).
+  - Detects "lock/binding/recount/void/invalidate" keywords in message.
   - Detects touches to the binding artifact list itself.
   - Requires Reviewer-Id: <agent>:<diff-hash> trailer OR Non-Semantic
     trailer in the commit message.
@@ -20,9 +25,10 @@ Behavior:
 
 Bypass: there is no clean bypass. To make a "wrong" commit the operator
 must remove the hook, which is itself a binding-artifact modification
-(scripts/git-hooks/pre-commit is in the review-required surface), and
+(scripts/git-hooks/commit-msg is in the review-required surface), and
 that future commit would have to carry a Reviewer-Id. The hook is
-removable, but removal is detectable.
+removable, but removal is detectable in git history (commits land that
+hook would have caught).
 """
 from __future__ import annotations
 
@@ -49,7 +55,7 @@ REVIEW_REQUIRED_PATTERNS: list[str] = [
     "v1/docs/evals/analyzer-determinism-corpus/README.md",
     "v1/backend/app/intel/reviewer/prompt.py",
     "v1/backend/app/intel/analyzer/prompt.py",
-    "v1/backend/scripts/git-hooks/pre-commit",  # the hook itself
+    "v1/backend/scripts/git-hooks/commit-msg",  # the hook itself
 ]
 
 
@@ -118,16 +124,21 @@ def _staged_files_status() -> list[tuple[str, str]]:
 
 
 def _commit_message() -> str:
-    """Read the commit message file. Hook is invoked with no args by git;
-    the message lives at .git/COMMIT_EDITMSG."""
-    # Find git root
+    """Read commit message. As a commit-msg hook, git passes the message
+    file path as argv[1]. Fall back to .git/COMMIT_EDITMSG if no arg
+    (e.g. when the hook is invoked manually for testing)."""
+    if len(sys.argv) >= 2:
+        msg_path = Path(sys.argv[1])
+        if msg_path.exists():
+            return msg_path.read_text(encoding="utf-8", errors="replace")
+    # Fallback for manual invocation
     root = _run(["git", "rev-parse", "--show-toplevel"]).strip()
     if not root:
         return ""
-    msg_path = Path(root) / ".git" / "COMMIT_EDITMSG"
-    if not msg_path.exists():
+    fallback = Path(root) / ".git" / "COMMIT_EDITMSG"
+    if not fallback.exists():
         return ""
-    return msg_path.read_text(encoding="utf-8", errors="replace")
+    return fallback.read_text(encoding="utf-8", errors="replace")
 
 
 def _diff_hash(diff: str) -> str:

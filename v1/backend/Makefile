@@ -21,6 +21,7 @@ migrate:
 	alembic upgrade head
 
 install-hooks:
-	cp scripts/git-hooks/pre-commit ../../.git/hooks/pre-commit
-	chmod +x ../../.git/hooks/pre-commit
-	@echo "pre-commit hook installed. See v1/backend/scripts/git-hooks/README.md"
+	rm -f ../../.git/hooks/pre-commit  # remove any stale pre-commit hook from earlier design
+	cp scripts/git-hooks/commit-msg ../../.git/hooks/commit-msg
+	chmod +x ../../.git/hooks/commit-msg
+	@echo "commit-msg hook installed (stale pre-commit removed if present). See v1/backend/scripts/git-hooks/README.md"
