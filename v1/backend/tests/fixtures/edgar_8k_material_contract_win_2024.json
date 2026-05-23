@@ -1,0 +1,19 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. Material customer contract win — exemplifies CLASS 2 (clearly actionable) in the determinism corpus diversity plan. Content paraphrased from public-style filings to avoid copyright; ticker and counterparty names are illustrative. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0009876543",
+    "name": "DefenseTech Corp.",
+    "ticker": "DFTC"
+  },
+  "filed_at": "2024-09-18T08:15:00-04:00",
+  "accepted_at": "2024-09-18T08:15:11-04:00",
+  "items": ["1.01 Entry into a Material Definitive Agreement", "7.01 Regulation FD Disclosure", "9.01 Financial Statements and Exhibits"],
+  "headline": "DefenseTech Corp. awarded $850 million multi-year contract by U.S. Department of Defense; represents ~28% of trailing-twelve-month revenue",
+  "body": "DefenseTech Corp. (NYSE: DFTC) today announced that it has been awarded a multi-year contract by the United States Department of Defense valued at up to $850 million over a five-year period. The contract is for the development, integration, and sustainment of next-generation autonomous logistics systems. Initial obligation of $215 million has been authorized for the first program year, with additional task orders to be issued on an annual basis subject to appropriations. The Company estimates the contract represents approximately 28% of its trailing-twelve-month revenue and is expected to be modestly accretive to earnings in fiscal 2025 and meaningfully accretive thereafter. Work will be performed primarily at the Company's facilities in Massachusetts and Virginia. The contract award follows a competitive procurement process. Management will discuss the contract during its previously scheduled Investor Day on September 24, 2024.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated September 18, 2024"},
+    {"type": "EX-10.1", "description": "Form of contract (redacted)"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0009876543&type=8-K"
+}

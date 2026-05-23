@@ -1,0 +1,18 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. Routine officer departure with a named successor — exemplifies CLASS 3 (clearly non-actionable) in the determinism corpus diversity plan. Content paraphrased from public-style filings to avoid copyright; ticker and entity names are illustrative. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0001234567",
+    "name": "MidCap Industrials Inc.",
+    "ticker": "MIDC"
+  },
+  "filed_at": "2024-07-12T17:45:00-04:00",
+  "accepted_at": "2024-07-12T17:45:22-04:00",
+  "items": ["5.02 Departure of Directors or Certain Officers; Election of Directors; Appointment of Certain Officers"],
+  "headline": "MidCap Industrials Inc. announces planned retirement of Chief Operating Officer, names successor",
+  "body": "MidCap Industrials Inc. (the 'Company') today announced that Jane Doe, the Company's Chief Operating Officer, will retire effective October 1, 2024 after twelve years with the Company. Ms. Doe's retirement is part of a previously communicated transition plan. The Company has appointed John Smith, currently Senior Vice President of Operations, to succeed Ms. Doe as Chief Operating Officer effective the same date. Mr. Smith has been with the Company for nine years. Ms. Doe will continue to serve in an advisory capacity through the end of fiscal year 2024 to support the transition. No changes to the Company's strategic plan, capital allocation, or operating outlook are being made in connection with this announcement.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated July 12, 2024"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001234567&type=8-K"
+}
