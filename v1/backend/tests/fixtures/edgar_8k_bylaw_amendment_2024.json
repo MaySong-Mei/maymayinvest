@@ -1,0 +1,18 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. Routine bylaw amendment (Item 5.03) — first CLASS 3 (clearly non-actionable) fixture in the corpus diversity plan after the MidCap-officer-departure fixture was burned. Mid-cap industrial company, mechanical procedural change (advance notice window + proxy access threshold), zero economic content. Ticker, company, and specific change details are illustrative; structure paraphrases how 8-K Item 5.03 bylaw filings typically appear. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0002468013",
+    "name": "Heartland Materials Inc.",
+    "ticker": "HLMT"
+  },
+  "filed_at": "2024-11-14T15:42:00-05:00",
+  "accepted_at": "2024-11-14T15:42:33-05:00",
+  "items": ["5.03 Amendments to Articles of Incorporation or Bylaws; Change in Fiscal Year", "9.01 Financial Statements and Exhibits"],
+  "headline": "Heartland Materials Inc. amends bylaws to update advance notice provisions and proxy access procedures",
+  "body": "On November 13, 2024, the Board of Directors of Heartland Materials Inc. (NYSE: HLMT) approved and adopted certain amendments to the Company's Amended and Restated Bylaws, effective immediately. The amendments (i) extend the advance notice window for stockholder nominations of directors and proposals of other business at annual meetings of stockholders from not less than 90 days nor more than 120 days prior to the anniversary of the preceding year's annual meeting to not less than 120 days nor more than 150 days; (ii) increase the minimum ownership threshold for proxy access from 3% of the outstanding shares held continuously for at least three years to 3% held for at least five years; and (iii) clarify certain procedural requirements regarding the form and content of stockholder notices and nominee questionnaires. The amendments do not affect the Company's existing capitalization, governance structure, or operations and do not require stockholder approval. The full text of the Amended and Restated Bylaws, as amended, is filed as Exhibit 3.1 to this Current Report on Form 8-K and is incorporated herein by reference.",
+  "exhibits": [
+    {"type": "EX-3.1", "description": "Amended and Restated Bylaws, as amended through November 13, 2024"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002468013&type=8-K"
+}
