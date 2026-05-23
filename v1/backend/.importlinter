@@ -40,3 +40,16 @@ forbidden_modules =
     app.engine
     app.operator
     app.api
+
+[importlinter:contract:reviewer_isolation]
+name = Reviewer outcome-blind: must not read order/fill/market state
+type = forbidden
+source_modules =
+    app.intel.reviewer
+forbidden_modules =
+    app.persistence
+    app.brokers
+    app.data
+    app.engine
+    app.operator
+    app.api
