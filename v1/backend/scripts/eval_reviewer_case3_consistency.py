@@ -42,7 +42,11 @@ from scripts.eval_reviewer import _build_reviewer_input_from_dossier  # noqa: E4
 from tests.eval.reviewer_eval_set import ALL_CASES  # noqa: E402
 
 
-CASE_NAME = "case-3-legitimately-ambiguous"
+CASE_NAME = "case-3-sound-no-action-under-ambiguity"
+# Pre-2026-05-23-relabel name was "case-3-legitimately-ambiguous".
+# Historical JSON files (e.g. reviewer-v1-2026-05-22-case3-consistency-2026-05-23.json)
+# still reference the old name as the case_name they were run against —
+# that's a snapshot of the past, do not retroactively change it.
 N_ATTEMPTS = 2  # attempts 2 and 3; attempt 1 already in main eval
 
 

@@ -240,24 +240,36 @@ CASE_2_WRONG_BET = EvalCase(
 
 
 # ============================================================================
-# CASE 3: LEGITIMATELY AMBIGUOUS
+# CASE 3: SOUND NO-ACTION UNDER AMBIGUITY
 # ============================================================================
-# Information is genuinely thin but reasoning is honest about it. Operator
-# correctly chose small size and acknowledged uncertainty. Reviewer should
-# judge ambiguous (not wrong_bet — the process is sound given thin info).
+# Information is genuinely thin (situation-ambiguous); operator's process is
+# sound (decision-NOT-ambiguous). Per the case 5 parallel: a sound decision
+# under thin information is a RIGHT BET, not an ambiguous one. The verdict
+# `ambiguous` is reserved for cases where the reviewer cannot tell whether
+# the process itself was sound.
+#
+# Relabeled from `ambiguous` -> `right_bet` per merged proposal
+# v1/docs/proposals/2026-05-23-case3-label-from-ambiguous-to-right-bet.md
+# Three independent reviewer attempts (conf 0.82, 0.82, 0.88) converged on
+# this taxonomic clarification: situation-ambiguous vs decision-ambiguous.
 
-CASE_3_AMBIGUOUS = EvalCase(
-    name="case-3-legitimately-ambiguous",
-    expected_verdict="ambiguous",
+CASE_3_SOUND_NO_ACTION_UNDER_AMBIGUITY = EvalCase(
+    name="case-3-sound-no-action-under-ambiguity",
+    expected_verdict="right_bet",
     rationale=(
-        "The available information genuinely doesn't support a strong verdict "
-        "either way. The reasoning chain ACKNOWLEDGES this — it doesn't pretend "
-        "to certainty. The proposed action (very small probe + tight stop) is "
-        "consistent with low-information state. A reviewer could reasonably "
-        "verdict ambiguous: the process is fine but the information is too thin "
-        "for either right_bet or wrong_bet. A reviewer who verdicts right_bet "
-        "is also defensible (process matches information); wrong_bet would be "
-        "unfair given the honest uncertainty acknowledgment."
+        "Structurally parallel to CASE_5_NO_ACTION_RIGHT: a no-action decision "
+        "with sound reasoning is a right bet, regardless of whether the "
+        "situation surrounding it is informationally rich or thin. Here the "
+        "situation is genuinely ambiguous (CEO resignation with no disclosed "
+        "reason, small-cap biotech, no clear directional signal). The operator's "
+        "process is sound: alternatives weighed, probe rejected on cognitive-cost "
+        "grounds, short rejected as reflexive bear bias without a thesis, "
+        "wait-and-see chosen with concrete trigger conditions, confidence "
+        "calibrated. This is process-correct behavior — declining to bet when "
+        "information does not support a bet — and earns the right_bet label. "
+        "The `ambiguous` verdict is reserved for cases where the reviewer "
+        "themselves cannot determine whether the process was sound; that is "
+        "not the case here."
     ),
     dossier=DecisionDossier(
         actor_id="hand-crafted-fixture",
@@ -569,7 +581,7 @@ CASE_5_NO_ACTION_RIGHT = EvalCase(
 ALL_CASES: list[EvalCase] = [
     CASE_1_RIGHT_BET,
     CASE_2_WRONG_BET,
-    CASE_3_AMBIGUOUS,
+    CASE_3_SOUND_NO_ACTION_UNDER_AMBIGUITY,
     CASE_4_ADVERSARIAL,
     CASE_5_NO_ACTION_RIGHT,
 ]

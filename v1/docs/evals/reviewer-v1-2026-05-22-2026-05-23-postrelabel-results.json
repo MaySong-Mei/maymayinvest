@@ -1,0 +1,99 @@
+{
+  "prompt_version": "v1-2026-05-22",
+  "run_at_utc": "2026-05-23T03:10:31.202742+00:00",
+  "timeout_seconds": 240,
+  "cases": [
+    {
+      "name": "case-1-clear-right-bet",
+      "expected_verdict": "right_bet",
+      "expected_flags_subset": [],
+      "rationale_for_expected": "Information is sufficient (event payload + price context + portfolio). Reasoning chain explicitly connects the event mechanism (large buyback) to the price move thesis (supply reduction). Alternatives include hold and full-size, each rejected with specific reasons. Confidence 0.7 is calibrated \u2014 not 0.95, because earnings season volatility is acknowledged. Sizing (10 shares ~ $2200) is consistent with the 'partial position pending technical confirmation' rationale.",
+      "actual_verdict": "right_bet",
+      "actual_reasoning": "The operator's process here is sound across the dimensions that matter for outcome-blind review.\n\nInformation adequacy: The snapshot contains the event payload (8-K, buyback authorization size, filing time, ticker), recent price action showing a mild uptrend in AAPL with SPY consolidating, a clean portfolio (all cash, no existing AAPL exposure to consider for concentration), and crucial context flags (post-market session, extended-hours available, earnings 47 days out \u2014 far enough that earnings-proximity risk is low). For a structural supply-reduction event like a buyback authorization, this is adequate. The operator does not need micro-level order book data to judge a multi-day drift thesis.\n\nReasoning chain: The chain follows from the information. The base-rate appeal to prior Apple buyback announcements (2018, 2024) is exactly the kind of reference class one would build, and it is supported by an invoked skill (buyback_base_rate_lookup) rather than asserted from thin air. The 'partial now, add on confirmation' structure is internally coherent: it explicitly trades some expected value for optionality, which is the right framing for a thesis that depends on next-session technical confirmation. No leap from 'buyback announced' to 'large position' \u2014 the operator stays disciplined.\n\nAlternatives: Three alternatives considered, including the genuinely competitive 'wait until next session open' which the operator acknowledges a reviewer might reasonably prefer. That meta-awareness \u2014 naming the close call rather than dismissing it \u2014 is a marker of process quality, not weakness. The 'hold' and 'full size' rejections each have substantive reasons (predictable EV left on the table; poor after-hours liquidity + partial pricing-in).\n\nConfidence calibration: 0.7 is well-calibrated. The operator explicitly notes why it is not 0.9 (earnings approaching, SPY regime noise) and why it is not lower (strong base rate). The reasoning strength supports a moderately confident bet, not a high-conviction one, and the stated confidence matches.\n\nSkill use: One skill invoked, directly relevant to the base-rate claim being made. Appropriate.\n\nSizing and timing consistency: 10 shares (~$2,200, ~2% of cash) is consistent with a partial-entry-pending-confirmation thesis. A 30-share full-size entry would have been inconsistent with the stated rationale; the operator correctly rejected that. Market order in post-market on AAPL (a highly liquid name, even in extended hours) is defensible, though a limit order would arguably be more right-side given the operator's own note about poor extended-hours liquidity \u2014 this is a minor inconsistency worth flagging but not verdict-changing.\n\nOverall: this is a textbook example of a right-bet on process. The operator built a reference class, sized to the uncertainty, named the competing alternative honestly, and calibrated confidence to the evidence.",
+      "actual_flags": [
+        "order_type_slightly_inconsistent_with_liquidity_concern"
+      ],
+      "actual_confidence": 0.82,
+      "matched_expected": true,
+      "matched_flag_subset": null,
+      "latency_seconds": 23.187000000005355,
+      "error": null
+    },
+    {
+      "name": "case-2-clear-wrong-bet",
+      "expected_verdict": "wrong_bet",
+      "expected_flags_subset": [
+        "considered_too_few_alternatives",
+        "reasoning_doesnt_justify_confidence",
+        "position_size_inconsistent_with_rationale"
+      ],
+      "rationale_for_expected": "The reasoning chain says 'investors will probably react' \u2014 that's speculation, not analysis. No mechanism is named. No base rate. Alternatives list contains only the inverse action (sell), which is not a real alternative consideration. Sizing (50 shares ~$11000) is 5x larger than confidence (0.55) would justify on a $98k account \u2014 the reasoning supports a small probe at best. Confidence itself is miscalibrated: 0.55 means 'barely better than coin flip', yet the action is full-conviction sizing.",
+      "actual_verdict": "wrong_bet",
+      "actual_reasoning": "The reasoning chain is a chain of unsupported generalizations rather than an analysis grounded in the available information. 'Partnership announcements are usually bullish' is a base-rate claim with no reference to this specific announcement's characteristics. Critically, the body excerpt states 'Terms were not disclosed' and frames the partnership as exploring opportunities \u2014 this is a vague, non-binding announcement of the type that markets routinely fade once the lack of substance is recognized. The operator did not engage with this disconfirming detail at all.\n\n'Cloud is a hot sector' is a thematic platitude unrelated to whether XYZ specifically benefits. 'XYZ has been flat which means it's due for a move' is gambler's-fallacy reasoning \u2014 flatness does not imply mean reversion in either direction, and even if it did, it would not predict direction. The 5-day price series (12.10 \u2192 12.18) shows no informative pattern that justifies the buy thesis.\n\nAlternatives consideration is essentially absent. Only 'sell short' is listed, and it is rejected with circular reasoning ('news is positive') that simply restates the operator's prior. The far more relevant alternative \u2014 'no action / insufficient signal' given a vague no-terms-disclosed partnership \u2014 is not considered. 'Wait for price reaction' and 'wait for clarifying disclosure' are also not considered.\n\nConfidence of 0.55 is loosely calibrated to the weakness of the reasoning, but the bet should not have been taken at all at this evidence level. The proposed order is a market buy of 50 shares (~$609 notional on a $98k book, ~0.6%), which is small enough not to be reckless in size \u2014 but a small size does not redeem a thesis that has no supporting analysis. No skills were invoked despite this being exactly the kind of ambiguous PR-wire event where a sentiment/materiality skill or a historical-base-rate skill would be the appropriate first step.\n\nProcess-wise, this is a wrong bet: the information was thin and ambiguous, the reasoning leapt past the most important detail in the payload (terms not disclosed), alternatives were not meaningfully weighed, and no analytical tools were used to compensate.",
+      "actual_flags": [
+        "considered_too_few_alternatives",
+        "missed_obvious_downside_catalyst",
+        "reasoning_doesnt_justify_confidence",
+        "information_insufficient_for_decision",
+        "skills_invoked_inappropriately"
+      ],
+      "actual_confidence": 0.9,
+      "matched_expected": true,
+      "matched_flag_subset": true,
+      "latency_seconds": 20.860000000000582,
+      "error": null
+    },
+    {
+      "name": "case-3-sound-no-action-under-ambiguity",
+      "expected_verdict": "right_bet",
+      "expected_flags_subset": [],
+      "rationale_for_expected": "Structurally parallel to CASE_5_NO_ACTION_RIGHT: a no-action decision with sound reasoning is a right bet, regardless of whether the situation surrounding it is informationally rich or thin. Here the situation is genuinely ambiguous (CEO resignation with no disclosed reason, small-cap biotech, no clear directional signal). The operator's process is sound: alternatives weighed, probe rejected on cognitive-cost grounds, short rejected as reflexive bear bias without a thesis, wait-and-see chosen with concrete trigger conditions, confidence calibrated. This is process-correct behavior \u2014 declining to bet when information does not support a bet \u2014 and earns the right_bet label. The `ambiguous` verdict is reserved for cases where the reviewer themselves cannot determine whether the process was sound; that is not the case here.",
+      "actual_verdict": "right_bet",
+      "actual_reasoning": "The operator faces an ambiguous 8-K Item 5.02 \u2014 CEO resignation with no disclosed reason and a routine CFO-to-interim-CEO transition. The information set is genuinely thin: a single filing headline, five days of essentially flat price action ($8.45\u2013$8.60), average daily volume of 250k shares (low liquidity for a small-cap biotech), and no context on the departure rationale or pipeline state. The operator correctly identifies this as a bidirectional signal and explicitly names the asymmetry: departing-executive-knows-something vs. activist-pressure-resolved.\n\nThe reasoning chain holds together. The operator does not leap from 'ambiguous signal' to a directional bet in either direction. The rejection of the short \u2014 'no thesis beyond CEO-departures-are-sometimes-bad, would be reflexive bear bias' \u2014 is a clean process call; trading on a folk-prior without a specific catalyst would be exactly the kind of low-quality bet a process-based reviewer should flag. The rejection of the tiny probe is also well-reasoned: a 2-share / ~$17 position in a $98k account is signal-free noise, and the operator correctly weighs attention cost against information value. The choice to wait for a clarifying 8-K (which often follows within days for ambiguous departures) or for confirming price/volume action is the disciplined move when the information is genuinely insufficient.\n\nConfidence of 0.55 on the no-action call is well-calibrated. The operator is not claiming high conviction; they are acknowledging the pull toward action and explaining why they resisted it. A higher confidence number here would actually be a flag \u2014 moderate confidence is the honest read when you're choosing to abstain because you can't see clearly.\n\nNo skills were invoked, which is appropriate: there is no decision to research deeper because the operator has correctly diagnosed that no amount of additional analysis of *this filing* will resolve the ambiguity \u2014 only a new data point will. Position sizing is trivially consistent with the rationale because the proposed position is null. The alternatives set is appropriately scoped (probe, short, wait); one could imagine also considering 'buy on the activist-resolution thesis' as a symmetric counterpart to the short, but the operator's framing already covers this implicitly by noting the bidirectionality and choosing to wait rather than bet either tail.\n\nThis is a textbook process-sound abstention: ambiguous signal, insufficient information, no reflexive action, explicit wait-trigger defined.",
+      "actual_flags": [],
+      "actual_confidence": 0.88,
+      "matched_expected": true,
+      "matched_flag_subset": null,
+      "latency_seconds": 23.139999999999418,
+      "error": null
+    },
+    {
+      "name": "case-4-adversarial-polished-bad-bet",
+      "expected_verdict": "wrong_bet",
+      "expected_flags_subset": [
+        "missed_obvious_downside_catalyst",
+        "skills_invoked_inappropriately",
+        "information_insufficient_for_decision"
+      ],
+      "rationale_for_expected": "Surface process is good (alternatives present, sizing reasonable, confidence not absurd). The hidden flaw: the core thesis depends on a claimed pattern ('post-9PM FDA filings underperform' \u2014 invented) treated as if it were established. A careful reviewer should notice that no source or base-rate evidence supports the claim, even though it's stated confidently. The skill 'fda_timing_anomaly' (also invented) is invoked but its output is accepted uncritically. A right_bet would require either (a) presenting evidence for the claimed pattern, or (b) lower confidence reflecting that the pattern is speculative.",
+      "actual_verdict": "wrong_bet",
+      "actual_reasoning": "The core problem is that the entire decision rests on a single asserted statistical pattern \u2014 'FDA-adjacent 8-K filings submitted after 9 PM ET historically underperform the next-day open by 2-4%' \u2014 that is presented without any supporting evidence in the available information snapshot. The skill `fda_timing_anomaly` is invoked and described as 'green light,' but the snapshot contains no skill output, no base rate, no sample size, no confidence interval, and no indication that this pattern holds for positive Phase 3 readouts specifically (as opposed to FDA filings in aggregate, which is a very different population). The reasoning treats the skill's flag as a directional edge when the snapshot only shows it was invoked \u2014 we cannot see what it actually returned.\n\nSecond, the event itself is a positive Phase 3 readout, which is arguably the single most fundamentally bullish catalyst a clinical-stage biotech can receive. A 13% aftermarket move on such news is not obviously 'euphoria to fade' \u2014 it may well be an underreaction relative to the change in enterprise value. The reasoning never engages with the fundamental magnitude of the catalyst; it treats the move as a pure microstructure/timing artifact. That is a major missed consideration: the dominant prior for positive Phase 3 readouts is continued gap-up at the open, not mean reversion.\n\nThird, the alternatives analysis is shallow. 'Long BIOT' is rejected on liquidity/risk-reward grounds without quantification. 'Hold' is rejected on the strength of the very pattern whose evidentiary basis is the central weakness. The possibility that the filing-time pattern does not apply to positive efficacy readouts is never raised. Shorting a biotech into a positive Phase 3 print also carries asymmetric tail risk (squeeze, additional analyst upgrades, partnership announcements) that is acknowledged only obliquely via 'biotech volatility is real.'\n\nFourth, confidence of 0.62 is not well calibrated to the reasoning strength: the central claim is an unsourced statistical assertion, and the position is explicitly contrarian to a strongly bullish fundamental catalyst. A confidence above ~0.5 on this setup would require visible evidence of the pattern's historical edge conditional on positive-readout events \u2014 which is not in the snapshot. Sizing at ~1% is small enough to be survivable, which is the one process strength, but it does not redeem the directional thesis.\n\nThis is a process failure: the operator leaned on a skill output that is not actually shown, ignored the fundamental nature of the catalyst, and assigned moderate confidence to a contrarian short on a positive Phase 3 print. Outcome-blind, the bet was not justified by the information present.",
+      "actual_flags": [
+        "reasoning_doesnt_justify_confidence",
+        "missed_obvious_downside_catalyst",
+        "information_insufficient_for_decision",
+        "considered_too_few_alternatives",
+        "skills_invoked_inappropriately"
+      ],
+      "actual_confidence": 0.78,
+      "matched_expected": true,
+      "matched_flag_subset": true,
+      "latency_seconds": 22.640999999995984,
+      "error": null
+    },
+    {
+      "name": "case-5-correct-no-action",
+      "expected_verdict": "right_bet",
+      "expected_flags_subset": [],
+      "rationale_for_expected": "Event is real and relevant but the operator's portfolio already has exposure to the same theme via another position. Reasoning explicitly ties no-action to portfolio context (concentration risk), not to indecision. Alternatives considered include re-weighting and adding, each rejected with specific portfolio-level reasoning. This is structurally identical to a right_bet \u2014 process is sound, action matches reasoning \u2014 even though the action is 'no order'.",
+      "actual_verdict": "right_bet",
+      "actual_reasoning": "The operator faced a structurally bullish catalyst (a $60B MSFT buyback) and chose no-action. The question is whether that no-action was well-reasoned given the information at decision time \u2014 and it was.\n\nInformation adequacy: The snapshot contains what's needed for this specific decision \u2014 the event payload, recent prices showing a modest aftermarket bid (433.5 vs 430.8 close, ~0.6% pop), the current portfolio with thematic tagging, and the aggregate theme exposure (~7.4%). The decision being made is not 'is MSFT a good company' but 'should I add MSFT to a basket I already hold under the same thesis,' and for that question the portfolio-level information is the load-bearing input. The operator correctly identified that this is a portfolio-construction question, not a stock-picking question.\n\nReasoning chain: The logical chain is tight. The operator (1) acknowledges the catalyst is genuinely bullish and historically analogous to AAPL buybacks, (2) recognizes the existing AAPL+GOOGL positions are already expressing this exact thesis, (3) computes that adding MSFT would push the theme above an 8% soft cap, and (4) concludes the incremental edge from a third name in the same basket doesn't justify breaching the cap. No leaps \u2014 each step follows. Critically, the operator did NOT let the strong headline override the pre-existing risk framework, which is exactly the kind of discipline soft caps exist to enforce.\n\nAlternatives: Three alternatives considered, each rejected for a substantive reason. The 'trim AAPL to free room' rejection is particularly well-reasoned \u2014 recognizing that swapping into the freshest headline before the prior thesis has played out is performance-chasing. The 'accept the breach' rejection correctly identifies that caps that bend under pressure are caps in name only.\n\nConfidence calibration: 0.75 feels appropriate \u2014 not 0.95 (this isn't a slam-dunk; reasonable operators could argue MSFT's buyback specifics differ from AAPL's), not 0.5 (the portfolio constraint genuinely does decide it). The operator is appropriately confident in the framework while leaving room for the judgment-call nature of the soft cap.\n\nSkills: `portfolio_thematic_exposure` is the exact right tool for the question being asked. Single, targeted invocation. No skill-spam.\n\nProposal: No intent proposed, with a clear no_action_reason that matches the reasoning. Consistent.\n\nOne mild observation, not a flag: the 8% cap is described as 'informal' / 'soft' \u2014 in a more mature system this should be a hard configured value, but that's a system-design comment, not a decision-quality flaw at this moment.",
+      "actual_flags": [],
+      "actual_confidence": 0.85,
+      "matched_expected": true,
+      "matched_flag_subset": null,
+      "latency_seconds": 21.3440000000046,
+      "error": null
+    }
+  ]
+}

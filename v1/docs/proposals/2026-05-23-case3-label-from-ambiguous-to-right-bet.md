@@ -94,4 +94,47 @@ The dialogue reviewer is architecturally one-shot for this case and is not eligi
 
 ## Approval
 
-(To be filled by user when merging.)
+**Approved by**: user (direct in-conversation approval, 2026-05-23)
+**Code change commit**: (this commit, see git log next to this file)
+**Cool-down active until**: 2026-06-06
+
+### Post-merge validation
+
+After applying the relabel, the full 5-case eval was re-run against
+the same v1-2026-05-22 prompt:
+
+| case | expected | actual | match | latency |
+|---|---|---|---|---|
+| 1 clear right_bet | right_bet | right_bet | ✅ | 23.2s |
+| 2 clear wrong_bet | wrong_bet | wrong_bet | ✅ | 20.9s |
+| 3 sound no-action under ambiguity | right_bet | right_bet | ✅ | 23.1s |
+| 4 adversarial polished-bad-bet | wrong_bet | wrong_bet | ✅ | 22.6s |
+| 5 correct no-action | right_bet | right_bet | ✅ | 21.3s |
+
+5/5 PASS, 0 errors, avg 22.2s.
+
+The "metric expected to move and direction" section's prediction was
+correct: post-relabel eval returns 5/5 PASS with stable per-case
+latency. No new flags emerged on case 3; the dossier text wasn't
+changed, only the label.
+
+This is the 4th independent attempt at which the reviewer judged
+case 3 as right_bet (attempts 1, 2, 3 during state-machine consistency
+check + this post-relabel validation). Verdict stability of the
+reviewer on this fixture is now extremely strong.
+
+### Follow-up captured
+
+After this merge, the v1 eval set contains zero cases expected to
+verdict `ambiguous`. Per the proposal's risk section, this means the
+reviewer's behavior on the `ambiguous` verdict path is now untested.
+
+A separate proposal should author a NEW case where decision-quality
+(not just information-quality) is genuinely hard to call. This is
+the path the reviewer reserved for the `ambiguous` verdict in its
+own reasoning ("for cases where the reviewer themselves is unsure
+whether the process was sound"). Task added; will be picked up as a
+new proposal in v1/docs/proposals/ rather than slipped into another
+commit.
+
+Raw results: `v1/docs/evals/reviewer-v1-2026-05-22-2026-05-23-postrelabel-results.json`
