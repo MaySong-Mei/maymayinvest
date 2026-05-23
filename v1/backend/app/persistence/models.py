@@ -216,6 +216,39 @@ class Review(Base):
     confidence: Mapped[Decimal] = mapped_column(MONEY)
 
 
+class PendingSignal(Base):
+    """notify/dry_run dossiers waiting for human action.
+
+    Lifecycle:
+      pending  → user sees it on dashboard
+      promoted → user clicked promote; an order was submitted via operator
+                 capability. resulting_client_order_id is set.
+      dismissed → user clicked dismiss with optional reason
+      expired   → optional auto-expiry policy (not enforced in v1)
+
+    Append-only for `created_at`/`dossier_id`/`mode`; status transitions
+    are the only mutation allowed and go through the repository functions.
+    """
+
+    __tablename__ = "pending_signals"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    dossier_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("decisions.id"), index=True, unique=True
+    )
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    mode: Mapped[str] = mapped_column(String(16))  # "notify" | "dry_run"
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    # "pending" | "promoted" | "dismissed" | "expired"
+
+    resolved_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    resolved_by: Mapped[str | None] = mapped_column(String(64), nullable=True)  # actor_id
+    resolution_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resulting_client_order_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("orders.client_order_id"), nullable=True
+    )
+
+
 class LlmCallLog(Base):
     """One row per LLM invocation. Linked to a decision OR a review, not both.
 
