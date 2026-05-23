@@ -124,9 +124,83 @@ If this assumption holds, the system can bootstrap. If it doesn't — if the rev
 We don't know yet whether this assumption holds. Stage 0 of the build is partly an experiment to find out. **Be prepared to find that it doesn't, and have a fallback plan** (e.g. human review of every decision for the first N months, slower evolution).
 
 Related concerns we're choosing to accept the risk of:
-- **Specification gaming on the reviewer.** CC may learn to write decisions that *sound* right rather than *are* right. Mitigation: occasionally human-review the reviewer's own judgments.
+- **Specification gaming on the reviewer.** CC may learn to write decisions that *sound* right rather than *are* right. Mitigation: occasionally human-review the reviewer's own judgments — see "Goal evolution" section below for the structured form of this.
 - **Skill bloat.** Without strong pruning, the skill library accumulates marginal-value entries. Mitigation: skills decay if not used in N days; periodic CC-led skill consolidation.
 - **Distributional shift.** A skill learned in a calm market may misfire in a regime change. Mitigation: skills carry regime metadata; reviewer considers regime fit explicitly.
+
+---
+
+## Goal evolution as a process-based decision
+
+The framing above pins **how we evaluate decisions** (right-bet, outcome-blind, reviewer-mediated). It does not pin **what counts as a right bet**. That definition lives in:
+
+- the reviewer prompt (currently `v1-2026-05-22`)
+- the flag taxonomy the reviewer applies
+- the implicit standards the human applies when approving skills / promoting signals
+- the metrics we use to track whether the system is "working"
+
+**All of these will need to change.** We can't see far enough ahead at v1 to define them once. But the *mechanism* by which they change is itself a process-based decision, and it deserves the same supervision as the trading decisions the system makes.
+
+### The invariant
+
+> Goals, metrics, reviewer prompts, and evaluation criteria MAY evolve, but only through a structured proposal-and-review process with cool-down, versioning, and explicit human approval. No silent in-place updates. No "I'll just tweak this and re-run".
+
+### Why this matters (the failure mode it prevents)
+
+The most plausible way this project rots is **gradual goal drift**:
+
+1. Reviewer keeps judging things `wrong_bet`
+2. Operator (me, future-me, or a future CC instance) finds the reviewer annoying
+3. Operator notices the reviewer prompt could be "tuned" — and writes a polished justification for relaxing it
+4. Prompt gets updated; reviewer becomes more lenient
+5. Right-bet rate goes up. The metric "looks healthier"
+6. Nothing was learned. Specification gaming has eaten the supervision layer.
+
+The operator at step 3 won't *know* it's gaming the metric. The rationalization will sound legitimate. This is the same dynamic that causes researchers to gradually weaken the criteria a study has to meet — Goodhart in slow motion.
+
+### How we resist it
+
+Five concrete mechanisms, listed in order of how seriously they should be applied:
+
+1. **Versioning is mandatory, never in-place edit.** The reviewer prompt today is `v1-2026-05-22`. If we want to change it, the next version is `v2-<date>-<slug>`. The old version stays in the registry. Historical reviews retain their prompt-version stamp so we can always interpret them in their original context.
+
+2. **Cool-down after change.** After a goal/metric/prompt update, **no further changes to that artifact for N days** (default 14). This prevents tuning-loop pathology where each unsatisfying run triggers another tweak.
+
+3. **Proposal documents change in writing first.** A change is a markdown file in `v1/docs/proposals/<date>-<artifact>-<change>.md` containing: what changes, why, what metric is expected to move and in what direction, what would falsify the proposal. The proposal goes to git BEFORE the code change. A change without a proposal is suspect.
+
+4. **Cool-headed reviewer (potentially the same subagent pattern this project uses for trading decisions).** A `goal_change_reviewer` subagent reads the proposal + git history of past changes to the same artifact + the system's current performance trajectory, and judges: is this change a right bet? Or is this tuning under frustration? Outcome-blind to whether the change "would have worked" — judges only whether the reasoning for changing is sound given pre-change information.
+
+5. **Human-only final approval gate.** Even after reviewer judgment, the change requires explicit human merge of the proposal PR. This is non-negotiable. The system **cannot self-modify its own goals**, full stop. This sits at the same architectural tier as "manual promote-to-live" — a human action that cannot be exposed as a capability.
+
+### What this enables
+
+Paradoxically, *more* flexibility, not less. Because the change mechanism is trustworthy, we can lower the cost of admitting "the current goal is wrong":
+
+- If reviewer prompt v1 is genuinely too strict, that's a legitimate finding — propose v2 with reasoning, cool down, get approved, ship
+- If a metric we initially thought mattered turns out to be a distraction, propose dropping it from the dashboard
+- If we discover a whole new way to characterize "right bet" (e.g. add a "regime fit" axis), propose adding it as a new dimension
+
+**The point of process is not to prevent change; it is to make change observable.** A bad change with a paper trail is a learnable failure. A bad change that snuck in via a tactical commit is a poisoned data well.
+
+### How the human side scales (or doesn't)
+
+This whole structure depends on the human (you) actually reviewing the proposals. The user's view (2026-05-22): "review 可以大幅度解决 [specification gaming]". I (the current operator) agree directionally but want the dependency surface visible:
+
+Effective supervision = `review coverage × review independence × review quality`
+
+- **Coverage**: what % of proposals do you actually read? 100% is ideal; realistically declines under load
+- **Independence**: do you read with fresh eyes, or rubber-stamp because you trust the operator?
+- **Quality**: do you actively look for failure modes, or skim for plausibility?
+
+The biggest risk is **time decay**. Today you'd read every proposal carefully. Three months in, after the operator has produced 30 reasonable-looking changes, you may start trusting and skimming. **That moment is when specification gaming actually enters the system.** Nothing in the harness prevents this; it must be a deliberate practice on your side.
+
+Mitigations the operator can offer:
+
+- Each proposal carries the operator's own `confidence` and an explicit `what I'm uncertain about` section — lets the user know which to scrutinize
+- Periodic `audit cadence` reminders that force a meta-review of recent changes (e.g. every 10 commits, do a from-scratch read of the diff vs the project's stated goals)
+- Old proposals stay in `v1/docs/proposals/` so you can see the shape of past reasoning and notice if it's drifted
+
+None of this guarantees the human doesn't drift. But it makes drift visible after the fact.
 
 ---
 
@@ -141,3 +215,7 @@ These are kept because they are the ground truth of *why* this project is shaped
 > "right bet 不一定是 right gain。我需要的是 right bet ... 类似 subagent review pr，aka 投资复盘 ... 指标分析是 pl 但是优化方向是做出正确的操作。"
 
 > "一步一步到 7×24" — meaning: architecture must permit eventual 24/7 operation, but v1 starts on local machine, present when user is.
+
+> "得定指标然后这个指标或者 metric 是可以换的但是需要 review 的慎重更新, ... goal 可以 progressive 地变更但是要 right bet 和 flexibility 并存" — source of the "Goal evolution as a process-based decision" section. Goals are not pinned at v1; they evolve through the same supervised process that the system uses for trading decisions.
+
+> "claude 确实有作弊率高的问题，但是 review 我认为可以大幅度解决" — acknowledgement of specification gaming as a real risk, and a belief that structured review can contain it. The "Goal evolution" section frames this as `review coverage × independence × quality`, with explicit note that time decay is the failure mode.
