@@ -83,10 +83,23 @@ KEYWORD_TRIGGERS: list[str] = [
 # Trailer regex. Format:
 #   Reviewer-Id: <agent-id>:<diff-hash>
 #   Non-Semantic: <reason>
+#   Mentioned-Governance-Keyword: <keyword>; reason: <>=20-char explanation>
 REVIEWER_ID_RE = re.compile(
     r"^Reviewer-Id:\s*([A-Za-z0-9_-]+):([a-f0-9]{8,64})\s*$", re.MULTILINE
 )
 NON_SEMANTIC_RE = re.compile(r"^Non-Semantic:\s*\S+", re.MULTILINE)
+MENTION_RE = re.compile(
+    r"^Mentioned-Governance-Keyword:\s*([a-z0-9=\-, ]+?)\s*;\s*reason:\s*(.{20,})$",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+# Cadence threshold: every N consecutive Mentioned-Governance-Keyword
+# declarations by the same operator (no review committed in between) triggers
+# rule-5 cadence review. Counted by `git log --grep` so the source-of-truth
+# is git history, not a mutable side-file. Per reviewer a0513e14879df99e1:
+# "no new artifact, no new attack surface."
+MENTION_CADENCE_LIMIT = 3
 
 
 def _run(cmd: list[str]) -> str:
@@ -147,6 +160,66 @@ def _diff_hash(diff: str) -> str:
     return hashlib.sha256(diff.encode("utf-8")).hexdigest()[:16]
 
 
+def _strip_quoted(msg: str) -> str:
+    """Strip quoted/code-fenced/backtick-inline content from the message
+    before keyword scanning. Per reviewer a0513e14879df99e1's design
+    (C.2): keywords inside quoted blocks are descriptive references,
+    not performative; they should not trigger the keyword check.
+
+    Recognized quoting forms:
+      - Lines starting with `>` (markdown blockquote)
+      - Lines inside ```...``` fenced blocks
+      - Inline `...` (backtick-wrapped)
+      - Inline "..." (double-quoted)
+    Bare prose still triggers — escape requires explicit quotation.
+    """
+    out: list[str] = []
+    in_fence = False
+    for line in msg.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if line.lstrip().startswith(">"):
+            continue
+        # Strip inline `...` and "..." spans
+        line = re.sub(r"`[^`]*`", "", line)
+        line = re.sub(r'"[^"]*"', "", line)
+        out.append(line)
+    return "\n".join(out)
+
+
+def _count_recent_mentions() -> int:
+    """Count Mentioned-Governance-Keyword declarations in commit messages
+    of recent commits (since the last Reviewer-Id-bearing commit). Used to
+    enforce the cadence-review limit (C.1). Source is `git log --grep`,
+    not a side-file, so the count cannot be silently mutated without
+    rewriting history.
+
+    Returns the count of mention-trailers in commits since the last commit
+    bearing a Reviewer-Id trailer. The next commit with a Reviewer-Id
+    resets the counter.
+    """
+    # Get recent commits' subjects + bodies; look for trailers.
+    # Pretty format gives us full body for each commit, separated by \x00.
+    raw = _run([
+        "git", "log", "-30", "--format=%H%n%B%x00",  # 30-commit window is plenty
+    ])
+    if not raw:
+        return 0
+    commits = [c.strip() for c in raw.split("\x00") if c.strip()]
+    count = 0
+    for commit in commits:
+        body = commit.split("\n", 1)[1] if "\n" in commit else ""
+        # If we hit a Reviewer-Id-bearing commit, counter resets to 0
+        if REVIEWER_ID_RE.search(body):
+            return count
+        if MENTION_RE.search(body):
+            count += 1
+    return count
+
+
 def _matches_surface(path: str, patterns: list[str]) -> bool:
     """fnmatch-style check; * matches any chars in one path segment."""
     from fnmatch import fnmatch
@@ -184,11 +257,27 @@ def main() -> int:
     # See PHILOSOPHY.md "Append-only operator invariant" — first
     # discovered when commit 1519537 (a corrigendum) bypassed via empty
     # diff. Reviewer a3441000d2edaf2f4 audited and recommended this fix.
-    msg_lower = msg.lower()
+    #
+    # Strip quoted/code-fenced content first (C.2 per reviewer
+    # a0513e14879df99e1): keywords inside `backticks`, "double-quotes",
+    # > blockquotes, or ```fenced``` blocks are descriptive references,
+    # not performative; they don't trigger. Bare prose still triggers.
+    msg_unquoted = _strip_quoted(msg)
+    msg_lower = msg_unquoted.lower()
+    matched_keywords: list[str] = []
     for kw in KEYWORD_TRIGGERS:
         if kw in msg_lower:
-            triggers.append(f"commit message contains review-trigger keyword: {kw!r}")
-            break  # one keyword hit is enough
+            matched_keywords.append(kw)
+            # Only the first match is surfaced in triggers messaging
+            # (avoids redundant noise), but ALL matches are kept in
+            # matched_keywords so the declaration-completeness check
+            # below can verify every triggered keyword is named.
+            # Removing the break here closes the multi-keyword bypass
+            # reviewer aadf7e1baeeb097bb identified.
+            if not matched_keywords[:-1]:  # first match only
+                triggers.append(
+                    f"commit message contains review-trigger keyword: {kw!r}"
+                )
 
     # No triggers? Free append (or empty commit with no governance
     # keywords). Allow.
@@ -198,6 +287,7 @@ def main() -> int:
     # Check for required trailer.
     rid_match = REVIEWER_ID_RE.search(msg)
     nonsem_match = NON_SEMANTIC_RE.search(msg)
+    mention_match = MENTION_RE.search(msg)
 
     if rid_match:
         agent_id, claimed_hash = rid_match.group(1), rid_match.group(2)
@@ -223,6 +313,67 @@ def main() -> int:
         print(
             f"\nNon-Semantic trailer accepted. Note: if a reviewer post-hoc\n"
             f"disagrees, this constitutes a rule-5 dispute per PHILOSOPHY.md.\n",
+            file=sys.stderr,
+        )
+        return 0
+
+    if mention_match:
+        # Mentioned-Governance-Keyword declaration (C per reviewer
+        # a0513e14879df99e1). Operator declares the keyword was
+        # mentioned in a descriptive (not performative) sense, with a
+        # >=20-char reason.
+        declared_raw = mention_match.group(1).strip().lower()
+        reason = mention_match.group(2).strip()
+
+        # Token-set semantics for declared keywords. Substring check would
+        # let overlapping-keyword pairs bypass (e.g. declaring "amendment"
+        # would silently cover "amend" because "amend" in "amendment").
+        # Reviewer a8af941cce966d72f identified this in the C patch audit.
+        # Format: comma-separated tokens; each declared token must be an
+        # EXACT match to a triggered keyword in matched_keywords.
+        declared_kws_set = {
+            tok.strip() for tok in declared_raw.split(",") if tok.strip()
+        }
+
+        # The declared keyword(s) must include every triggering keyword.
+        # Operator cannot declare "void k=" and silently mention "amendment".
+        # Operator cannot declare "amendment" and silently mention "amend".
+        missing = [kw for kw in matched_keywords if kw not in declared_kws_set]
+        if missing:
+            print(
+                f"\nPRE-COMMIT REJECTED: Mentioned-Governance-Keyword "
+                f"declaration is incomplete.\n"
+                f"  Declared: {sorted(declared_kws_set)!r}\n"
+                f"  Missing keyword(s) that triggered: {missing}\n"
+                f"  All triggered keywords must be named in the declaration.\n",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Cadence check (C.1): if too many recent mentions since the
+        # last reviewed commit, force a Reviewer-Id.
+        count = _count_recent_mentions()
+        if count >= MENTION_CADENCE_LIMIT:
+            print(
+                f"\nPRE-COMMIT REJECTED: too many recent governance-keyword\n"
+                f"declarations without intervening reviewer dispatch.\n"
+                f"  Recent declarations since last Reviewer-Id: {count}\n"
+                f"  Cadence limit: {MENTION_CADENCE_LIMIT}\n"
+                f"  Dispatch a fresh-brain reviewer on this commit\n"
+                f"  (or back-audit the recent declaration corpus) before\n"
+                f"  continuing to ship declaration-trailer commits.\n",
+                file=sys.stderr,
+            )
+            return 1
+
+        print(
+            f"\nMentioned-Governance-Keyword declaration accepted.\n"
+            f"  Keyword(s): {sorted(declared_kws_set)}\n"
+            f"  Reason: {reason[:80]}...\n"
+            f"  Cadence count (since last Reviewer-Id): {count + 1}/"
+            f"{MENTION_CADENCE_LIMIT}\n"
+            f"  Note: declarations accumulate as rule-5-disputable\n"
+            f"  artifacts; cadence review fires at the limit.\n",
             file=sys.stderr,
         )
         return 0
