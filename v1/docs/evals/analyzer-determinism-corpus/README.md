@@ -39,3 +39,8 @@ Operator curates fixtures incrementally — does NOT need to write all K=10 fixt
 - Filename: `<YYYY-MM-DD-of-first-capture>-<event-slug>.md`. Set once.
 - If the operator wants to test whether disagreement is stable across days (re-running analyzer 3x on the same event a week later), that is a DIFFERENT experiment and goes in a different doc, NOT a second corpus entry.
 - Rationale: corpus measures "what does the analyzer do on a fresh event" — a re-run is no longer a fresh event because the operator has already seen the first 3 dossiers.
+
+**Fixture hygiene: no operator metadata in the payload.**
+- Fixture JSON files MAY include keys prefixed with `_` (e.g. `_fixture_note`) for operator commentary on how the fixture was curated, what class it exemplifies, etc.
+- The capture script `scripts/capture_event_to_corpus.py` MUST strip these before passing the payload to the analyzer. (Implemented in `_strip_operator_metadata`.)
+- Discovered 2026-05-23 during K=2: a fixture's `_fixture_note` saying "exemplifies CLASS 3 (clearly non-actionable)" leaked into the analyzer prompt and the analyzer parroted "CLASS 3 non-actionable" in its own reasoning. The first two corpus entries (AAPL K=1 and MidCap K=2) are flagged contaminated and DO NOT count toward K=10. K-count restarts after the fix.

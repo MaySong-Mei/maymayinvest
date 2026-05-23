@@ -43,31 +43,49 @@ def _slug(s: str, maxlen: int = 40) -> str:
     return s[:maxlen] or "event"
 
 
+def _strip_operator_metadata(payload: dict) -> dict:
+    """Strip keys starting with `_` from the payload. These are operator
+    meta-comments (e.g. `_fixture_note` explaining how the fixture was
+    curated) that MUST NOT reach the analyzer prompt — they would leak
+    the operator's classification of the event, contaminating the analysis.
+
+    Discovered 2026-05-23 during K=2 corpus capture: a fixture's
+    `_fixture_note` saying 'exemplifies CLASS 3 (clearly non-actionable)'
+    showed up verbatim in the analyzer's reasoning chain. This strip is
+    the fix.
+    """
+    return {k: v for k, v in payload.items() if not k.startswith("_")}
+
+
 def _make_event_from_payload(payload: dict) -> Event:
     """Build an Event from a fixture payload. Supports both EDGAR-shaped
-    fixtures and minimal {kind, headline, payload, ...} shapes."""
-    if "filer" in payload and "filed_at" in payload:
+    fixtures and minimal {kind, headline, payload, ...} shapes.
+
+    Operator metadata (keys prefixed with `_`) is stripped before the
+    payload is attached to the Event. See _strip_operator_metadata."""
+    clean = _strip_operator_metadata(payload)
+    if "filer" in clean and "filed_at" in clean:
         # EDGAR-shaped (matches tests/fixtures/edgar_8k_*.json)
-        ts_str = payload.get("accepted_at") or payload.get("filed_at")
+        ts_str = clean.get("accepted_at") or clean.get("filed_at")
         return Event(
             kind=EventKind.EDGAR_8K,
             source="manual",
-            external_id=f"manual:{payload['filer']['ticker'].lower()}-"
-                        f"{_slug(payload['headline'], 30)}-{ts_str}",
+            external_id=f"manual:{clean['filer']['ticker'].lower()}-"
+                        f"{_slug(clean['headline'], 30)}-{ts_str}",
             ts=datetime.fromisoformat(ts_str).astimezone(UTC),
-            symbols=[payload["filer"]["ticker"]],
-            headline=payload["headline"],
-            payload=payload,
+            symbols=[clean["filer"]["ticker"]],
+            headline=clean["headline"],
+            payload=clean,
         )
     # Minimal shape
     return Event(
-        kind=EventKind(payload.get("kind", "test_synthetic")),
-        source=payload.get("source", "manual"),
-        external_id=payload["external_id"],
-        ts=datetime.fromisoformat(payload["ts"]).astimezone(UTC),
-        symbols=payload.get("symbols", []),
-        headline=payload["headline"],
-        payload=payload.get("payload", payload),
+        kind=EventKind(clean.get("kind", "test_synthetic")),
+        source=clean.get("source", "manual"),
+        external_id=clean["external_id"],
+        ts=datetime.fromisoformat(clean["ts"]).astimezone(UTC),
+        symbols=clean.get("symbols", []),
+        headline=clean["headline"],
+        payload=clean.get("payload", clean),
     )
 
 

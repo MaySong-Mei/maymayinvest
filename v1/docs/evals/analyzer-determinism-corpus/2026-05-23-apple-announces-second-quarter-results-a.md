@@ -1,5 +1,21 @@
 # Corpus entry: Apple announces second quarter results; authorizes additional $110 billion share repurchase program
 
+> **⚠️ CONTAMINATED — DOES NOT COUNT TOWARD K=10**
+>
+> This entry was captured before the `_fixture_note` leak fix. The
+> AAPL fixture's `_fixture_note` describes the fixture as "paraphrased
+> structure mirroring how SEC EDGAR exposes Item 8.01 filings... so
+> this fixture stays in our repo without copyright concerns" — meta-
+> information that tells the analyzer the input is hand-curated rather
+> than a real polled filing.
+>
+> The contamination is milder than K=2 (no explicit "class" label was
+> leaked), but still violates the principle that the analyzer should
+> not see operator-level meta-commentary on the fixture. Entry retained
+> as historical record.
+>
+> K-count resets at the next valid (post-fix) capture.
+
 - event_id: `manual:aapl-apple-announces-second-quarter-2024-05-02T16:30:14-04:00`
 - kind: edgar_8k
 - ts: 2024-05-02T20:30:14+00:00
