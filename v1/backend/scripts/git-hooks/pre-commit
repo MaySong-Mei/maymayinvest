@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""Pre-commit hook enforcing the Append-only operator invariant.
+
+See v1/docs/PHILOSOPHY.md "Append-only operator invariant" for the
+six rules. This hook is the mechanical enforcement layer.
+
+Install:
+  cp v1/backend/scripts/git-hooks/pre-commit .git/hooks/pre-commit
+  chmod +x .git/hooks/pre-commit
+
+Behavior:
+  - Reads the staged diff (git diff --cached).
+  - Detects modifications (vs adds-only) in the review-required surface.
+  - Detects "lock/binding/recount/void/invalidate" keywords in commit
+    message (read from .git/COMMIT_EDITMSG).
+  - Detects touches to the binding artifact list itself.
+  - Requires Reviewer-Id: <agent>:<diff-hash> trailer OR Non-Semantic
+    trailer in the commit message.
+  - Rejects with explanation if required trailer missing or hash mismatch.
+
+Bypass: there is no clean bypass. To make a "wrong" commit the operator
+must remove the hook, which is itself a binding-artifact modification
+(scripts/git-hooks/pre-commit is in the review-required surface), and
+that future commit would have to carry a Reviewer-Id. The hook is
+removable, but removal is detectable.
+"""
+from __future__ import annotations
+
+import hashlib
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+# Review-required surface. Initial list per PHILOSOPHY "Append-only
+# operator invariant" Enforcement section. Add to this list via
+# rule 6 (binding artifact list is itself binding).
+#
+# Path patterns are fnmatch-style. A modification (NOT a pure add)
+# to a path matching any pattern triggers review-required.
+REVIEW_REQUIRED_PATTERNS: list[str] = [
+    "v1/docs/PHILOSOPHY.md",
+    "v1/docs/V1_SCOPE.md",
+    "v1/docs/ARCHITECTURE.md",
+    "v1/docs/proposals/amendments/*.md",  # modification of filed amendments
+    "v1/docs/evals/*-plan-*.md",  # pre-reg plans after lock
+    "v1/docs/evals/analyzer-determinism-corpus/README.md",
+    "v1/backend/app/intel/reviewer/prompt.py",
+    "v1/backend/app/intel/analyzer/prompt.py",
+    "v1/backend/scripts/git-hooks/pre-commit",  # the hook itself
+]
+
+
+# Keywords that suggest the commit performs a re-interpretation or
+# binding action, even if the diff alone doesn't trip the surface check.
+# This is the second-line defense against bundling.
+KEYWORD_TRIGGERS: list[str] = [
+    "lock pre-reg",
+    "locking pre-reg",
+    "void k=",
+    "invalidate k=",
+    "recount",
+    "contamination",
+    "contaminated",
+    "deprecate",
+    "deprecated",
+    "reinterpret",
+    "re-interpret",
+    "binding artifact",
+    "amend",
+    "amendment",
+]
+
+
+# Trailer regex. Format:
+#   Reviewer-Id: <agent-id>:<diff-hash>
+#   Non-Semantic: <reason>
+REVIEWER_ID_RE = re.compile(
+    r"^Reviewer-Id:\s*([A-Za-z0-9_-]+):([a-f0-9]{8,64})\s*$", re.MULTILINE
+)
+NON_SEMANTIC_RE = re.compile(r"^Non-Semantic:\s*\S+", re.MULTILINE)
+
+
+def _run(cmd: list[str]) -> str:
+    """Run a git command, return stdout. Empty string on failure.
+    Uses UTF-8 + errors='replace' so non-ASCII in diff (Chinese quotes
+    in PHILOSOPHY, etc) doesn't crash the hook on Windows."""
+    try:
+        out_bytes = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+        return out_bytes.decode("utf-8", errors="replace")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return ""
+
+
+def _staged_diff() -> str:
+    """Full staged diff content."""
+    return _run(["git", "diff", "--cached", "--no-color"])
+
+
+def _staged_files_status() -> list[tuple[str, str]]:
+    """List of (status_letter, path) for staged files.
+
+    Status letters: A=added, M=modified, D=deleted, R=renamed, etc.
+    We care about distinguishing A (free append at the file level) from
+    M (modification, potentially review-required).
+    """
+    out = _run(["git", "diff", "--cached", "--name-status"])
+    pairs: list[tuple[str, str]] = []
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 2:
+            status = parts[0][0]  # first letter (handles R### renames)
+            path = parts[-1]
+            pairs.append((status, path))
+    return pairs
+
+
+def _commit_message() -> str:
+    """Read the commit message file. Hook is invoked with no args by git;
+    the message lives at .git/COMMIT_EDITMSG."""
+    # Find git root
+    root = _run(["git", "rev-parse", "--show-toplevel"]).strip()
+    if not root:
+        return ""
+    msg_path = Path(root) / ".git" / "COMMIT_EDITMSG"
+    if not msg_path.exists():
+        return ""
+    return msg_path.read_text(encoding="utf-8", errors="replace")
+
+
+def _diff_hash(diff: str) -> str:
+    """SHA-256 of the staged diff, hex-encoded, first 16 chars (sufficient
+    uniqueness for our review-tracking purpose, short enough to type)."""
+    return hashlib.sha256(diff.encode("utf-8")).hexdigest()[:16]
+
+
+def _matches_surface(path: str, patterns: list[str]) -> bool:
+    """fnmatch-style check; * matches any chars in one path segment."""
+    from fnmatch import fnmatch
+    return any(fnmatch(path, p) for p in patterns)
+
+
+def _is_modification(status: str) -> bool:
+    """A=add (free), M=modify (review surface), R=rename (modify),
+    D=delete (modify), C=copy (treat as modify)."""
+    return status in {"M", "R", "D", "C"}
+
+
+def main() -> int:
+    diff = _staged_diff()
+    if not diff:
+        # Nothing staged. Let git handle whatever's happening.
+        return 0
+
+    files = _staged_files_status()
+    msg = _commit_message()
+
+    # Compute trigger reasons.
+    triggers: list[str] = []
+
+    # Trigger 1: modification (not pure add) on review-required surface.
+    for status, path in files:
+        if _is_modification(status) and _matches_surface(path, REVIEW_REQUIRED_PATTERNS):
+            triggers.append(
+                f"modifies review-required artifact: {path} (status={status})"
+            )
+
+    # Trigger 2: keyword in commit message suggesting re-interpret/binding action.
+    msg_lower = msg.lower()
+    for kw in KEYWORD_TRIGGERS:
+        if kw in msg_lower:
+            triggers.append(f"commit message contains review-trigger keyword: {kw!r}")
+            break  # one keyword hit is enough
+
+    # No triggers? Free append. Allow.
+    if not triggers:
+        return 0
+
+    # Check for required trailer.
+    rid_match = REVIEWER_ID_RE.search(msg)
+    nonsem_match = NON_SEMANTIC_RE.search(msg)
+
+    if rid_match:
+        agent_id, claimed_hash = rid_match.group(1), rid_match.group(2)
+        actual_hash = _diff_hash(diff)
+        if not actual_hash.startswith(claimed_hash) and not claimed_hash.startswith(actual_hash):
+            # Allow prefix match in either direction so operator can type
+            # a shorter hash without exact match. But forbid clear mismatch.
+            print(
+                f"\nPRE-COMMIT REJECTED: Reviewer-Id hash mismatch.\n"
+                f"  Claimed: {claimed_hash}\n"
+                f"  Actual diff hash: {actual_hash}\n"
+                f"  Reusing a reviewer's hash from a different diff is not allowed.\n"
+                f"  See v1/docs/PHILOSOPHY.md 'Append-only operator invariant'.\n",
+                file=sys.stderr,
+            )
+            return 1
+        # Valid Reviewer-Id with matching hash. Allow.
+        return 0
+
+    if nonsem_match:
+        # Non-semantic carve-out. Allow but warn that disagreement is a
+        # rule-5 dispute.
+        print(
+            f"\nNon-Semantic trailer accepted. Note: if a reviewer post-hoc\n"
+            f"disagrees, this constitutes a rule-5 dispute per PHILOSOPHY.md.\n",
+            file=sys.stderr,
+        )
+        return 0
+
+    # Triggered but no valid trailer. Reject.
+    print(
+        f"\nPRE-COMMIT REJECTED: append-only operator invariant violation.\n\n"
+        f"Trigger reasons:\n",
+        file=sys.stderr,
+    )
+    for t in triggers:
+        print(f"  - {t}", file=sys.stderr)
+    diff_h = _diff_hash(diff)
+    print(
+        f"\nThis commit requires fresh-brain review before landing.\n"
+        f"\n"
+        f"To proceed:\n"
+        f"  1. Dispatch a dialogue reviewer on the staged diff.\n"
+        f"     Reviewer should audit per rules 2/3/4/5/6 of the\n"
+        f"     Append-only operator invariant (PHILOSOPHY.md).\n"
+        f"  2. Capture the reviewer's agent id.\n"
+        f"  3. Add a commit trailer:\n"
+        f"     Reviewer-Id: <agent-id>:{diff_h}\n"
+        f"\n"
+        f"For non-semantic edits (typos, broken links, whitespace),\n"
+        f"add a Non-Semantic: <reason> trailer instead.\n"
+        f"\n"
+        f"See v1/docs/PHILOSOPHY.md 'Append-only operator invariant' for\n"
+        f"the full mandate.\n",
+        file=sys.stderr,
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as exc:  # noqa: BLE001
+        # Fail-closed: if the hook itself errors, reject rather than allow.
+        # Operator must either fix the hook or use --no-verify (which is
+        # itself an auditable action visible in git's reflog).
+        print(
+            f"\nPRE-COMMIT HOOK INTERNAL ERROR: {type(exc).__name__}: {exc}\n"
+            f"Rejecting commit fail-closed. Either fix the hook or, in an\n"
+            f"emergency, use `git commit --no-verify` and document why in\n"
+            f"the next commit message.\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)

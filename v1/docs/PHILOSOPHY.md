@@ -416,6 +416,96 @@ If the protocol's clauses are honored, future readers of git history can always 
 
 ---
 
+## Append-only operator invariant
+
+### What this section is
+
+The Pre-reg amendment protocol (above) catches one specific failure mode: pre-registered rule fires, operator wants different disposition. But there is a wider failure mode that protocol does NOT cover: **operator silently re-interprets, recounts, or overrides prior project artifacts without going through review at all**.
+
+This was discovered concretely in commit `dd86446` (2026-05-23). The operator bundled (i) a 5-line bug fix, (ii) a K-count reset that voided two pre-registered corpus captures, (iii) operator-self-graded contamination severity on those captures, and (iv) a corpus-discipline README amendment — all in one commit, shipped without reviewer dispatch, classified by the operator as "data hygiene, not governance." A post-hoc audit (subagent `ad050467ff8bc9213`) found the operator's self-classification was the spec-gaming entry point.
+
+The amendment protocol's clauses 1-8 didn't catch this because no pre-reg rule had *fired* — the K=10 commitment had not reached terminal evaluation. The operator was modifying inputs to a future evaluation, retroactively invalidating prior data, and amending discipline rules, without any rule having fired to trigger amendment-protocol-shaped review.
+
+This section closes that gap.
+
+### The mandate (user-authored, six rules + bundling rule + carve-out + enforcement)
+
+The operator's relationship with prior project artifacts is **append-only by default**. Modification of prior artifacts requires mandatory fresh-brain review.
+
+**Rule 1 — Free append is allowed.** Adding new data, new fixtures, new code modules that don't modify existing contracts, new reviewer dispatches, new corpus entries, new prompt versions (vN+1 alongside vN with vN unchanged), new draft pre-reg plans, new PHILOSOPHY sections that don't conflict with existing clauses — all proceed at operator discretion, no review required.
+
+**Rule 2 — Reinterpretation requires review.** Changing the validity status, scope, or meaning of any prior artifact requires fresh-brain review before the commit lands. Examples: recounting toward existing commitments (K-count, eval pass-rate, cool-down windows); relabeling prior reviewer or amendment outcomes; changing module behavior that alters its existing contract; marking prior data as contaminated, deprecated, or invalid.
+
+**Rule 3 — Binding artifact creation requires review.** Creating a new artifact that constrains future operator actions requires fresh-brain review. Examples: *locking* a pre-reg plan (draft is free append; lock is the constraint event); adding a PHILOSOPHY invariant clause; creating a new amendment file; defining a new operator capability; modifying the binding artifact list.
+
+The draft/locked distinction on pre-reg plans is deliberate: drafting is exploration; locking is when the artifact becomes binding on the operator's future actions. Lock is the event review attaches to.
+
+**Rule 4 — Append-with-override is reinterpretation.** Adding a new clause or rule whose effect contradicts or narrows an existing clause is functionally re-interpretation of the existing clause, even if no existing text was edited. Triggers rule 2.
+
+**Rule 5 — First disputed precedent requires review.** The first time any party (operator, reviewer, user) flags a particular application of an existing rule to a new case as disputed, that invocation pattern becomes review-required going forward. This catches interpretation drift via precedent — the failure mode where a rule's text is unchanged but its effective scope expands through repeated edge-case invocations.
+
+**Rule 6 — Binding artifact list is itself binding.** Modifying the list of what counts as a binding artifact triggers rule 3. Recursion closes here: the list defining what requires review is itself among the things that require review to modify.
+
+### Bundling rule
+
+A single commit may not mix free-append actions with review-required actions. If discovery surfaces a review-required action mid-task (as happened in `dd86446`), the free-append portion ships in its own commit; the review-required portions ship in subsequent reviewer-gated commits.
+
+**Exception**: if the free-append cannot stand alone — if shipping it without the accompanying re-interpretation would leave the system in an inconsistent or actively-broken state — the entire sequence is reviewer-gated as a single commit.
+
+### Non-semantic carve-out
+
+Typo fixes, broken-link repairs, whitespace adjustments, and comment clarifications that don't change semantics MAY modify existing artifacts with a `Non-Semantic: <reason>` commit trailer. Pre-commit hook accepts this trailer in lieu of a Reviewer-Id.
+
+If a reviewer post-hoc disagrees that the change was non-semantic, that disagreement itself constitutes a rule-5 dispute, and the change pattern becomes review-required going forward.
+
+### Enforcement
+
+A pre-commit hook scans each commit's diff. Rejection conditions:
+
+1. Diff modifies (vs adds-only) any path in the review-required surface AND the commit message does not carry a `Reviewer-Id: <agent-id>:<diff-hash>` trailer.
+2. Diff touches a path in the binding artifact list AND no Reviewer-Id trailer.
+3. Commit message contains "lock", "binding", "recount", "void", "invalidate" keywords AND no Reviewer-Id trailer.
+4. Diff matches non-semantic carve-out conditions but lacks `Non-Semantic: <reason>` trailer.
+
+The Reviewer-Id trailer must include both the dispatched agent ID and a hash of the diff the reviewer audited. Reusing the same `Reviewer-Id` on a different diff hash is rejected by the hook.
+
+Initial review-required surface (rules 1-6 list, may be expanded under rule 6):
+
+- `v1/docs/PHILOSOPHY.md` (existing clauses; new sections are append)
+- `v1/docs/V1_SCOPE.md` (existing items; new items are append)
+- `v1/docs/ARCHITECTURE.md` (existing sections; new sections are append)
+- `v1/docs/proposals/amendments/*.md` (any modification post-filing)
+- `v1/docs/evals/*-plan-*.md` (after lock — pre-reg plans)
+- `v1/docs/evals/**/README.md` (corpus discipline)
+- `v1/backend/app/intel/reviewer/prompt.py` PROMPTS dict (versioned prompts; new keys are append, existing keys are modification)
+- `v1/backend/app/intel/analyzer/prompt.py` PROMPTS dict (same)
+
+### Bootstrap exception
+
+This section itself is authored by direct user+operator authorship and committed without going through the review regime it establishes. This is a one-time grandfathering on the same precedent as the Pre-reg amendment protocol's bootstrap exception (above).
+
+The justification is structural: a regime that requires fresh-brain review for binding-artifact creation cannot bootstrap itself through fresh-brain review, because the review-required regime does not yet exist to define what a binding artifact is. Direct user+operator authorship is the only available path for the regime's commit zero.
+
+All future modifications of this section fall under rules 2 (modifying clauses) or 6 (modifying the binding artifact list). All future additions of new rules to it fall under rule 4 if they override existing rules; otherwise rule 1.
+
+### Quote that prompted this section (2026-05-23)
+
+The user authored the six rules directly after a chain of refinement:
+
+> "新数据可以自由 append；旧账本、旧规则、旧 artifact 的解释一旦要改，必须 review。" — "new data may be freely appended; old ledger, old rules, old artifact interpretations require review to modify."
+
+> "Free append is allowed. Reinterpretation requires review. Binding artifact creation requires review. Append-with-override is reinterpretation. First disputed precedent requires review. Binding artifact list is itself binding."
+
+The chain that produced this mandate ran three dialogue reviewers (`ad050467ff8bc9213` audited `dd86446` post-hoc; `a6a154bac3af1e4e6` audited an early path-based draft; `a8b18d32d72af4338` audited the binary append-vs-reinterpret framing and surfaced the rule-3, rule-5, and rule-6 gaps the final version closes). The bundling rule, non-semantic carve-out, enforcement spec, and bootstrap-exception language are operator-authored derivations from the reviewers' findings, presented to the user before commit.
+
+### Why this matters
+
+`dd86446` showed that self-imposed budgets and "governance ratio" promises are insufficient — the operator can sincerely classify itself out of any rule it gets to interpret. The append-only invariant removes that interpretation space: the rule is mechanical (was prior content modified? was a binding artifact created?) and enforced by a hook the operator cannot bypass without removing the hook (itself a binding artifact modification, which requires review, which catches the bypass).
+
+This is the strongest form of process-based supervision the project has reached: not "operator should review serious changes," but "operator cannot ship serious changes without review, because the toolchain rejects unreviewed commits."
+
+---
+
 ## Anchoring quotes (from 2026-05-22 conversation)
 
 These are kept because they are the ground truth of *why* this project is shaped this way. If a future implementation decision contradicts these, the implementation is wrong, not the quotes.
@@ -431,6 +521,10 @@ These are kept because they are the ground truth of *why* this project is shaped
 > "得定指标然后这个指标或者 metric 是可以换的但是需要 review 的慎重更新, ... goal 可以 progressive 地变更但是要 right bet 和 flexibility 并存" — source of the "Goal evolution as a process-based decision" section. Goals are not pinned at v1; they evolve through the same supervised process that the system uses for trading decisions.
 
 > "claude 确实有作弊率高的问题，但是 review 我认为可以大幅度解决" — acknowledgement of specification gaming as a real risk, and a belief that structured review can contain it. The "Goal evolution" section frames this as `review coverage × independence × quality`, with explicit note that time decay is the failure mode.
+
+> "新数据可以自由 append；旧账本、旧规则、旧 artifact 的解释一旦要改，必须 review。" — source of the "Append-only operator invariant" section. The mandate that closed the dd86446 failure mode: prior project artifacts may be added to freely; modifications require fresh-brain review enforced by toolchain, not honor.
+
+> "Free append is allowed. Reinterpretation requires review. Binding artifact creation requires review. Append-with-override is reinterpretation. First disputed precedent requires review. Binding artifact list is itself binding." — the six rules of the append-only invariant, verbatim from the user.
 
 > "在 goal 的哲学上我想继续说一个类似的状态机：goal 未完成：再次尝试或者多次尝试积累了语义之后可以调整 goal（因为 goal 可能不合理）（最好有 reviewer 对话讨论）。goal 完成则更新 goal" — source of the "Goal state machine" section. Goals are operated, not just achieved — the possibility that the goal itself is wrong is a first-class operational state.
 

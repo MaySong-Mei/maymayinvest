@@ -1,4 +1,4 @@
-.PHONY: ci test lint typecheck contracts dev migrate
+.PHONY: ci test lint typecheck contracts dev migrate install-hooks
 
 ci: lint typecheck contracts test
 
@@ -19,3 +19,8 @@ dev:
 
 migrate:
 	alembic upgrade head
+
+install-hooks:
+	cp scripts/git-hooks/pre-commit ../../.git/hooks/pre-commit
+	chmod +x ../../.git/hooks/pre-commit
+	@echo "pre-commit hook installed. See v1/backend/scripts/git-hooks/README.md"
