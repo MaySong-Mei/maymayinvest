@@ -56,167 +56,67 @@ is `runner` on ClaudeCodeReviewer.
 """
 from __future__ import annotations
 
-import asyncio
 import json
-import os
-import subprocess
-from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Protocol
+from typing import Any
 from uuid import UUID
 
 from app.domain.decision import DecisionReview, DecisionVerdict
+from app.intel._subprocess import (
+    DEFAULT_CLAUDE_CMD,
+    DEFAULT_TIMEOUT_SECONDS,
+    DefaultRunner,
+    SubprocessError,
+    SubprocessResult,
+    SubprocessRunner,
+    _build_subprocess_env,  # re-exported for backward-compat with tests
+    parse_json_strict,
+    raise_for_nonzero,
+)
 from app.intel.reviewer.base import DecisionReviewer, ReviewerContext
 from app.intel.reviewer.prompt import get_prompt
 
 
-DEFAULT_TIMEOUT_SECONDS = 60
-DEFAULT_CLAUDE_CMD = ("claude", "-p", "--output-format", "text")
+# Backward-compatible name. Existing tests import ReviewerError from this
+# module; keep that import path alive.
+ReviewerError = SubprocessError
 
 
-class ReviewerError(RuntimeError):
-    """Reviewer subprocess or parse failure. Caller decides retry / incident."""
+# Backward-compatible alias. Tests import _DefaultRunner from here.
+_DefaultRunner = DefaultRunner
 
 
-@dataclass
-class SubprocessResult:
-    """What a runner returns. Mirrors subprocess.CompletedProcess just enough
-    to keep tests from depending on the stdlib type."""
-
-    returncode: int
-    stdout: str
-    stderr: str
-
-
-class SubprocessRunner(Protocol):
-    """Injection point. Default impl shells out to `claude -p`; tests pass
-    a fake runner that returns a canned SubprocessResult."""
-
-    async def run(
-        self,
-        cmd: tuple[str, ...],
-        stdin: str,
-        timeout_seconds: int,
-    ) -> SubprocessResult: ...
-
-
-def _build_subprocess_env() -> dict[str, str]:
-    """Construct the env passed to the claude subprocess.
-
-    Three paths, in priority order:
-
-      Path 1 (preferred, subscription users): if
-        CLAUDE_CODE_OAUTH_TOKEN is set and non-empty, forward it and
-        STRIP ANTHROPIC_API_KEY entirely. ANTHROPIC_API_KEY
-        out-precedes OAuth token in claude's auth chain — if a
-        poisoned empty ANTHROPIC_API_KEY were left in, it would
-        beat the OAuth token and we'd 401.
-
-      Path 2 (API customers): if ANTHROPIC_API_KEY is non-empty,
-        leave it alone. claude will use it directly.
-
-      Path 3 (fall-through): strip empty ANTHROPIC_API_KEY and let
-        claude try OAuth keychain. This path is known to fail under
-        nested Claude Code due to OAuth refresh race (see
-        v1/docs/evals/reviewer-v1-2026-05-22.md). Kept only so a
-        user running from a fresh terminal can use it without having
-        to setup-token.
-
-    Returns the full env dict; caller passes it to subprocess.
-    """
-    env = dict(os.environ)
-    oauth_token = env.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
-    api_key = env.get("ANTHROPIC_API_KEY", "").strip()
-
-    if oauth_token:
-        # Path 1: subscription token wins; ANTHROPIC_API_KEY must be absent
-        # so it doesn't out-precede the OAuth token.
-        env["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
-        env.pop("ANTHROPIC_API_KEY", None)
-    elif api_key:
-        # Path 2: explicit API key (non-empty); leave env alone.
-        pass
-    else:
-        # Path 3: nothing usable in env. Strip empty ANTHROPIC_API_KEY
-        # so claude doesn't try to use it as a bearer token. Falls
-        # through to OAuth keychain (which races inside nested CC).
-        env.pop("ANTHROPIC_API_KEY", None)
-
-    return env
-
-
-class _DefaultRunner(SubprocessRunner):
-    """Real subprocess runner. Spawns claude -p, pipes prompt on stdin."""
-
-    async def run(
-        self,
-        cmd: tuple[str, ...],
-        stdin: str,
-        timeout_seconds: int,
-    ) -> SubprocessResult:
-        # asyncio.subprocess so we don't block the event loop
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=_build_subprocess_env(),
-        )
-        try:
-            stdout_b, stderr_b = await asyncio.wait_for(
-                proc.communicate(stdin.encode("utf-8")),
-                timeout=timeout_seconds,
-            )
-        except asyncio.TimeoutError as exc:
-            proc.kill()
-            await proc.wait()
-            raise ReviewerError(
-                f"claude subprocess exceeded {timeout_seconds}s timeout"
-            ) from exc
-
-        return SubprocessResult(
-            returncode=proc.returncode or 0,
-            stdout=stdout_b.decode("utf-8", errors="replace"),
-            stderr=stderr_b.decode("utf-8", errors="replace"),
-        )
+# Backward-compat re-exports for tests that import these by name from
+# app.intel.reviewer.claude_code.
+__all__ = [
+    "ClaudeCodeReviewer",
+    "ReviewerError",
+    "SubprocessResult",
+    "SubprocessRunner",
+    "_DefaultRunner",
+    "_build_subprocess_env",
+    "_parse_verdict_json",
+    "DEFAULT_TIMEOUT_SECONDS",
+    "DEFAULT_CLAUDE_CMD",
+]
 
 
 def _parse_verdict_json(raw: str) -> dict[str, Any]:
-    """Parse the reviewer's JSON output. Strict — no markdown fence
-    tolerance, no leading prose. The prompt instructs JSON-only.
+    """Parse the reviewer's JSON output (markdown-fence tolerant).
 
-    Real claude -p output sometimes wraps in ```json fences. We strip
-    those defensively since prompt obedience is not 100%.
+    Wraps the shared parser with reviewer-specific semantic validation:
+      - verdict must be one of {right_bet, wrong_bet, ambiguous}
+      - flags must be a list
     """
-    text = raw.strip()
-    if text.startswith("```"):
-        # strip ```json ... ``` or ``` ... ```
-        lines = text.splitlines()
-        if lines and lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].startswith("```"):
-            lines = lines[:-1]
-        text = "\n".join(lines).strip()
-
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ReviewerError(f"reviewer response is not valid JSON: {exc}; raw={raw!r}") from exc
-
-    if not isinstance(data, dict):
-        raise ReviewerError(f"reviewer response must be a JSON object, got {type(data).__name__}")
-
-    required = {"verdict", "reasoning", "flags", "confidence"}
-    missing = required - data.keys()
-    if missing:
-        raise ReviewerError(f"reviewer response missing required keys: {sorted(missing)}")
-
+    data = parse_json_strict(
+        raw, required_keys={"verdict", "reasoning", "flags", "confidence"}
+    )
     if data["verdict"] not in {"right_bet", "wrong_bet", "ambiguous"}:
-        raise ReviewerError(f"invalid verdict: {data['verdict']!r}")
-
+        raise SubprocessError(f"invalid verdict: {data['verdict']!r}")
     if not isinstance(data["flags"], list):
-        raise ReviewerError(f"flags must be a list, got {type(data['flags']).__name__}")
-
+        raise SubprocessError(
+            f"flags must be a list, got {type(data['flags']).__name__}"
+        )
     return data
 
 
@@ -257,18 +157,7 @@ class ClaudeCodeReviewer(DecisionReviewer):
             stdin=full_prompt,
             timeout_seconds=self.timeout_seconds,
         )
-
-        if result.returncode != 0:
-            # Some claude failures (notably 401 auth errors) write the
-            # diagnostic to stdout rather than stderr. Include both streams
-            # in the error so the cause isn't lost. Found during the
-            # 2026-05-23 reviewer eval — see v1/docs/evals/reviewer-v1-2026-05-22.md.
-            raise ReviewerError(
-                f"claude subprocess exited {result.returncode}; "
-                f"stderr={result.stderr[:500]!r}; "
-                f"stdout={result.stdout[:500]!r}"
-            )
-
+        raise_for_nonzero(result)
         data = _parse_verdict_json(result.stdout)
 
         return DecisionReview(
@@ -282,5 +171,3 @@ class ClaudeCodeReviewer(DecisionReviewer):
         )
 
 
-# expose for test injection
-_ = subprocess  # keep import in case _DefaultRunner gets a sync fallback later

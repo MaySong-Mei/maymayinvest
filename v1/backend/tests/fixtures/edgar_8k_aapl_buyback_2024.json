@@ -1,0 +1,18 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. Apple announced a $110B share repurchase authorization on 2024-05-02. The content below is a paraphrased structure mirroring how SEC EDGAR exposes Item 8.01 filings; the legal/specific wording is paraphrased so this fixture stays in our repo without copyright concerns. source='manual' marks this as hand-curated, not EDGAR-polled.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0000320193",
+    "name": "Apple Inc.",
+    "ticker": "AAPL"
+  },
+  "filed_at": "2024-05-02T16:30:00-04:00",
+  "accepted_at": "2024-05-02T16:30:14-04:00",
+  "items": ["2.02 Results of Operations and Financial Condition", "8.01 Other Events", "9.01 Financial Statements and Exhibits"],
+  "headline": "Apple announces second quarter results; authorizes additional $110 billion share repurchase program",
+  "body": "Apple Inc. today announced financial results for its fiscal 2024 second quarter ended March 30, 2024. The Company posted quarterly revenue of $90.8 billion, down 4 percent year over year, and quarterly diluted earnings per share of $1.53, up 0.7 percent year over year. The Board of Directors authorized an additional program to repurchase up to $110 billion of the Company's common stock. The Board also declared a cash dividend of $0.25 per share of the Company's common stock, an increase of 4 percent. The dividend is payable on May 16, 2024 to shareholders of record as of the close of business on May 13, 2024. Apple's board of directors has authorized this program in addition to the existing share repurchase program announced in May 2023. Net sales results by category for the quarter were: iPhone $45.96B, Mac $7.45B, iPad $5.56B, Wearables, Home and Accessories $7.91B, Services $23.87B.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated May 2, 2024"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=8-K"
+}
