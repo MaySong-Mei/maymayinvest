@@ -1,0 +1,18 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. CLASS 5 (edge cases) fixture — late-filed 8-K shape: company previously filed NT 8-K (Form 12b-25) indicating delayed periodic filing, now files an 8-K disclosing material developments that contributed to the delay. The filing timing itself (after extended deadline) is part of the signal, not just the content. Mid-cap healthcare services name. Different shape from class-2 (clear catalyst), class-3 (routine), class-4 (mixed bullish/bearish in same filing) — here the meta-signal is 'this company has had filing-discipline issues recently and is now disclosing why.' Ticker and details illustrative; structure paraphrases how late-filed 8-Ks typically appear after NT 8-K relief expires. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0007531944",
+    "name": "Meridian Health Services Corp.",
+    "ticker": "MHSC"
+  },
+  "filed_at": "2024-12-19T10:08:00-05:00",
+  "accepted_at": "2024-12-19T10:08:41-05:00",
+  "items": ["4.02 Non-Reliance on Previously Issued Financial Statements or a Related Audit Report or Completed Interim Review", "8.01 Other Events", "9.01 Financial Statements and Exhibits"],
+  "headline": "Meridian Health Services concludes prior interim financial statements should not be relied upon; identifies revenue-recognition errors in two prior quarters; expects to file restated 10-Q forms within 30 days",
+  "body": "On December 18, 2024, the Audit Committee of the Board of Directors of Meridian Health Services Corp. (NASDAQ: MHSC), after consultation with management and the Company's independent registered public accounting firm, concluded that the Company's previously issued unaudited interim financial statements included in its Quarterly Reports on Form 10-Q for the fiscal quarters ended June 30, 2024 and September 30, 2024 (the 'Affected Periods') should no longer be relied upon. The Company had previously filed a Notification of Late Filing on Form 12b-25 on November 14, 2024 indicating that the September 30, 2024 Form 10-Q would not be filed within the prescribed time period. The errors identified relate to the timing of revenue recognition for certain managed-care contracts in the Company's behavioral health segment, where revenue was recognized at contract execution rather than as services were performed. Management currently estimates that the cumulative effect of the correction will reduce previously reported revenue for the Affected Periods by approximately $42 million and $58 million respectively, and will reduce reported diluted EPS for the Affected Periods by approximately $0.18 and $0.25 respectively. The Company expects to file amended Quarterly Reports on Form 10-Q/A for the Affected Periods within 30 days. The Company has not concluded its evaluation of the materiality of these errors for full-year results and has not yet determined whether additional periods may require restatement. The Company has been in dialogue with its commercial lenders and currently believes it remains in compliance with all applicable debt covenants based on covenant calculations adjusted for the expected restatements, but discussions are ongoing.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated December 19, 2024"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0007531944&type=8-K"
+}
