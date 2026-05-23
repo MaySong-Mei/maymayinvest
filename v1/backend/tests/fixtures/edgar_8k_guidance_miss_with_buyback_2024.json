@@ -1,0 +1,19 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. CLASS 4 (mixed/surprise) fixture — first of its class in the corpus diversity plan. Mid-large cap consumer staples company simultaneously announces FY guidance miss AND a meaningful buyback authorization. Designed to stress-test analyzer behavior on events that contain both bearish operational and bullish capital-return signals in the same filing. Ticker, company, and figures are illustrative; structure paraphrases how 8-K Items 2.02 + 8.01 typically appear together. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0003691215",
+    "name": "Coastal Provisions Co.",
+    "ticker": "CPVC"
+  },
+  "filed_at": "2024-08-08T16:05:00-04:00",
+  "accepted_at": "2024-08-08T16:05:27-04:00",
+  "items": ["2.02 Results of Operations and Financial Condition", "8.01 Other Events", "9.01 Financial Statements and Exhibits"],
+  "headline": "Coastal Provisions reports Q2 results below consensus, lowers full-year guidance, and authorizes new $1.2 billion share repurchase program",
+  "body": "Coastal Provisions Co. (NYSE: CPVC) today reported financial results for the second quarter ended June 30, 2024. Net revenue was $2.84 billion, a decrease of 3.2% year over year, compared to consensus expectations of $2.97 billion. Adjusted diluted earnings per share were $0.81, compared to consensus expectations of $0.94 and prior-year Q2 of $1.02. The Company attributed the shortfall to softer demand in its North American grocery channel, persistent input-cost inflation, and an unfavorable mix shift toward lower-margin private-label categories. The Company is lowering its full-year fiscal 2024 guidance. Adjusted EPS is now expected in the range of $3.30 to $3.45, compared to prior guidance of $3.65 to $3.80 and consensus of $3.62. Full-year organic net revenue is expected to be approximately flat to down 1%, compared to prior guidance of up 1% to 2%. Separately, the Board of Directors today authorized a new share repurchase program of up to $1.2 billion of the Company's outstanding common stock, with no expiration date. This program is in addition to approximately $180 million remaining under the prior authorization. The Company also reaffirmed its commitment to its current dividend policy. Management will host a conference call to discuss the results and outlook tomorrow, August 9, 2024, at 8:30 a.m. ET.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated August 8, 2024 (earnings and capital return announcement)"},
+    {"type": "EX-99.2", "description": "Investor presentation slides for August 9, 2024 conference call"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0003691215&type=8-K"
+}
