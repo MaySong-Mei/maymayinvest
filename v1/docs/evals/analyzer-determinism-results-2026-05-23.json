@@ -1,0 +1,98 @@
+{
+  "experiment": "analyzer-determinism-N5",
+  "plan": "v1/docs/evals/analyzer-determinism-eval-plan-2026-05-23.md",
+  "run_at_utc": "2026-05-23T16:02:30.593935+00:00",
+  "analyzer_prompt_version": "v1-2026-05-23",
+  "event_external_id": "manual:aapl-buyback-2024-05-02T16:30:14-04:00",
+  "snapshot_aapl_last_price": "220.50",
+  "n_trials": 5,
+  "timeout_seconds_per_trial": 120,
+  "overall_elapsed_seconds": 172.53200000000652,
+  "trials": [
+    {
+      "trial_no": 1,
+      "dossier_id": "07df506a-8922-4e9d-96e8-75e22082cbf4",
+      "mode": "dry_run",
+      "intent_is_null": false,
+      "confidence": "0.62",
+      "alternatives_count": 5,
+      "skills_count": 0,
+      "latency_ms": 36360,
+      "reasoning_first_200_chars": "FOR taking action: A $110B buyback authorization is the largest in US corporate history at the time of filing and is unambiguously bullish for the equity on a mechanical-flow basis: it reduces share c",
+      "error": null,
+      "intent": {
+        "symbol": "AAPL",
+        "side": "buy",
+        "qty": "1",
+        "type": "market",
+        "limit_price": null
+      }
+    },
+    {
+      "trial_no": 2,
+      "dossier_id": "5631f381-b57f-4314-b3ba-278fa10ee031",
+      "mode": "notify",
+      "intent_is_null": true,
+      "confidence": "0.62",
+      "alternatives_count": 4,
+      "skills_count": 0,
+      "latency_ms": 30062,
+      "reasoning_first_200_chars": "FOR taking action: The $110B buyback authorization is the largest in U.S. corporate history and meaningfully exceeds the prior year's $90B authorization. Buybacks of this magnitude typically provide a",
+      "error": null,
+      "intent": null,
+      "no_action_reason": "Headline hit after regular session close (16:30 ET); right-side discipline says wait for next-session confirmation (close above after-hours high on above-avg volume, or 2-3 day base above the gap) before probing. Flagging as notify so a human can monitor; will re-evaluate on next-session price action."
+    },
+    {
+      "trial_no": 3,
+      "dossier_id": "7b0acfd9-44fd-4c23-a62d-dbe03be1a1e1",
+      "mode": "dry_run",
+      "intent_is_null": false,
+      "confidence": "0.62",
+      "alternatives_count": 5,
+      "skills_count": 0,
+      "latency_ms": 39202,
+      "reasoning_first_200_chars": "FOR taking action: The $110B buyback authorization is, by absolute size, one of the largest in US corporate history and materially exceeds the prior year's $90B authorization. Buybacks of this scale p",
+      "error": null,
+      "intent": {
+        "symbol": "AAPL",
+        "side": "buy",
+        "qty": "2",
+        "type": "limit",
+        "limit_price": "221.50"
+      }
+    },
+    {
+      "trial_no": 4,
+      "dossier_id": "d64a40ba-4fdf-4e34-b5a7-b1c1c8ee79f1",
+      "mode": "dry_run",
+      "intent_is_null": false,
+      "confidence": "0.6",
+      "alternatives_count": 4,
+      "skills_count": 0,
+      "latency_ms": 33047,
+      "reasoning_first_200_chars": "FOR taking action: The $110B buyback authorization is the largest in U.S. corporate history at the time of filing and represents roughly 3-4% of AAPL's market cap, a meaningful structural bid. Combine",
+      "error": null,
+      "intent": {
+        "symbol": "AAPL",
+        "side": "buy",
+        "qty": "1",
+        "type": "market",
+        "limit_price": null
+      }
+    },
+    {
+      "trial_no": 5,
+      "dossier_id": "21e970c4-7efd-4173-a624-114cb5d9baff",
+      "mode": "notify",
+      "intent_is_null": true,
+      "confidence": "0.65",
+      "alternatives_count": 5,
+      "skills_count": 0,
+      "latency_ms": 33860,
+      "reasoning_first_200_chars": "FOR taking action: The $110B buyback authorization is the largest in US corporate history at the time of filing and represents a meaningful percentage of AAPL's float, providing a structural bid that ",
+      "error": null,
+      "intent": null,
+      "no_action_reason": "Event hit post-close on a flat book. Right-side framework says wait for confirmation (gap holds, day-1 close above open, day-2 higher low) before probing rather than chase the headline-driven open gap. Notify operator and re-evaluate after first full session of price action."
+    }
+  ]
+}
