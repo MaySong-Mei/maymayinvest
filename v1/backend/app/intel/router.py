@@ -22,15 +22,18 @@ submitter.
 """
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.bar import Bar
 from app.domain.decision import DecisionDossier
-from app.domain.order import Order, OrderIntent
+from app.domain.order import Order, OrderIntent, OrderSide
 from app.persistence.repositories.decisions import save_dossier
 from app.persistence.repositories.pending_signals import enqueue
+from app.strategy.signals.trend import breakout_confirmed, ma_cross_confirmed
 
 
 class OrderSubmitter(Protocol):
@@ -44,11 +47,22 @@ class OrderSubmitter(Protocol):
     async def submit(self, intent: OrderIntent, reasoning: str) -> Order: ...
 
 
+# Optional callback to fetch recent bars for the technical confirmation gate.
+# Returns the most recent N closed bars in chronological order. None means
+# "no bar data available" — confirmation gate must NOT make assumptions in
+# that case; it blocks the trade (right-side discipline: no data, no confirm).
+BarProvider = Callable[[str], Awaitable[list[Bar] | None]]
+
+
 @dataclass
 class RouterContext:
     session: AsyncSession
     submitter: OrderSubmitter
     actor_id: str  # actor that produced the dossier; carried forward to broker call
+    bar_provider: BarProvider | None = None
+    # If None: auto-mode trades are blocked at the confirmation gate (no
+    # data, no confirmation, right-side discipline rejects). Set in
+    # production once a real market-data adapter is wired.
 
 
 class RouteResult:
@@ -62,6 +76,8 @@ class RouteResult:
         order: Order | None = None,
         risk_blocked: bool = False,
         risk_reason: str | None = None,
+        confirmation_blocked: bool = False,
+        confirmation_reason: str | None = None,
         no_action: bool = False,
     ) -> None:
         self.mode = mode
@@ -70,6 +86,8 @@ class RouteResult:
         self.order = order
         self.risk_blocked = risk_blocked
         self.risk_reason = risk_reason
+        self.confirmation_blocked = confirmation_blocked
+        self.confirmation_reason = confirmation_reason
         self.no_action = no_action
 
     def __repr__(self) -> str:
@@ -82,6 +100,8 @@ class RouteResult:
             bits.append(f"order={self.order.client_order_id}")
         if self.risk_blocked:
             bits.append(f"risk_blocked={self.risk_reason!r}")
+        if self.confirmation_blocked:
+            bits.append(f"confirmation_blocked={self.confirmation_reason!r}")
         return f"RouteResult({', '.join(bits)})"
 
 
@@ -104,6 +124,65 @@ def _check_risk_gate(intent: OrderIntent) -> tuple[bool, str | None]:
     """
     _ = intent  # unused in stub
     return True, None
+
+
+# ---------- technical confirmation gate (right-side discipline) ----------
+
+
+async def _check_technical_confirmation(
+    intent: OrderIntent,
+    bar_provider: BarProvider | None,
+) -> tuple[bool, str | None]:
+    """Right-side discipline: only execute long entries that have technical
+    confirmation. Auto mode applies this gate AFTER the risk gate passes.
+
+    Pass conditions (any of the following confirms a long entry):
+      - breakout_confirmed: recent close above prior 20-bar high with vol >= 1.2x avg
+      - ma_cross_confirmed: 10-MA above 30-MA, freshly crossed, confirmed >= 2 bars
+
+    Fail conditions:
+      - bar_provider is None: no data, no confirmation → block (right-side
+        discipline: refuse to act without confirmation evidence)
+      - bar_provider returns None: same as None provider
+      - bar_provider returns too few bars: same
+      - neither breakout nor MA-cross fires
+      - intent.side is SELL: shorts are not handled by this gate in v1. They
+        fall through (return ok) — operator is responsible for shorts via
+        a separate path. v1 default is long-only per V1_SCOPE.md.
+
+    Returns (passed, reason).
+    """
+    if intent.side != OrderSide.BUY:
+        # v1 is long-only by default. This gate doesn't claim authority over
+        # short entries; they fall through. (When v1 adds shorts, a separate
+        # gate function for short-side confirmation should be added here.)
+        return True, None
+
+    if bar_provider is None:
+        return False, (
+            "no bar provider configured; right-side discipline requires "
+            "confirmation before auto-mode execution"
+        )
+
+    bars = await bar_provider(intent.symbol)
+    if bars is None or len(bars) < 31:
+        # ma_cross_confirmed needs 30 + 2 + 1 = 33 bars worst case; allow 31
+        # as the floor since breakout only needs 21 and is the cheaper signal.
+        return False, (
+            f"insufficient bar data for {intent.symbol} (got "
+            f"{0 if bars is None else len(bars)} bars, need >=31); "
+            "cannot establish confirmation"
+        )
+
+    if breakout_confirmed(bars):
+        return True, None
+    if ma_cross_confirmed(bars):
+        return True, None
+    return False, (
+        f"no technical confirmation: neither breakout_confirmed nor "
+        f"ma_cross_confirmed fires on recent {len(bars)} bars of "
+        f"{intent.symbol}"
+    )
 
 
 # ---------- mode handlers ----------
@@ -172,6 +251,23 @@ async def _handle_auto(
             dossier_id=dossier.id,
             risk_blocked=True,
             risk_reason=reason,
+        )
+
+    # Right-side discipline: only execute long entries that have technical
+    # confirmation on recent bars. Risk gate first (cheap), then confirmation
+    # (requires bar data). Failed confirmation does NOT enqueue a
+    # pending_signal — auto-mode commits to "act now or not at all"; if
+    # confirmation isn't there, the operator can re-emit later (next event
+    # cycle) once it is.
+    conf_ok, conf_reason = await _check_technical_confirmation(
+        intent, ctx.bar_provider
+    )
+    if not conf_ok:
+        return RouteResult(
+            mode="auto",
+            dossier_id=dossier.id,
+            confirmation_blocked=True,
+            confirmation_reason=conf_reason,
         )
 
     # Submit. The OrderSubmitter is responsible for audit + capability

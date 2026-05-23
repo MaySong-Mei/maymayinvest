@@ -18,6 +18,7 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.domain.bar import Bar
 from app.domain.decision import (
     AlternativeConsidered,
     DecisionDossier,
@@ -100,8 +101,88 @@ def _dossier(mode: str, *, with_intent: bool) -> DecisionDossier:
     )
 
 
-def _ctx(session, submitter) -> RouterContext:
-    return RouterContext(session=session, submitter=submitter, actor_id="test-actor")
+def _ctx(session, submitter, bar_provider=None) -> RouterContext:
+    return RouterContext(
+        session=session,
+        submitter=submitter,
+        actor_id="test-actor",
+        bar_provider=bar_provider,
+    )
+
+
+# ---------- bar generators (for confirmation-gate tests) ----------
+
+
+def _ts(i: int) -> datetime:
+    """Sequential daily timestamps starting 2026-01-01, no month-boundary issues."""
+    from datetime import timedelta
+    return datetime(2026, 1, 1, tzinfo=UTC) + timedelta(days=i)
+
+
+def _bars_breakout(symbol: str = "AAPL", n: int = 35) -> list[Bar]:
+    """Generate bars where the latest close exceeds the prior 20-bar high
+    on above-average volume — triggers breakout_confirmed.
+
+    n >= 31 so the gate's bar-count check (>=31) passes. We don't need
+    ma_cross to fire — breakout alone is enough for confirmation.
+    """
+    base = Decimal("100.00")
+    bars: list[Bar] = []
+    for i in range(n - 1):
+        bars.append(
+            Bar(
+                symbol=symbol,
+                freq="1d",
+                ts=_ts(i),
+                open=base,
+                high=base + Decimal("0.50"),
+                low=base - Decimal("0.50"),
+                close=base,
+                volume=Decimal("100000"),
+            )
+        )
+    # Last bar: gap up + volume spike
+    bars.append(
+        Bar(
+            symbol=symbol,
+            freq="1d",
+            ts=_ts(n - 1),
+            open=base + Decimal("1.00"),
+            high=base + Decimal("2.00"),
+            low=base + Decimal("0.80"),
+            close=base + Decimal("1.50"),  # > prior 20-bar high of 100.50
+            volume=Decimal("150000"),  # > 1.2x average of 100k
+        )
+    )
+    return bars
+
+
+def _bars_no_confirmation(symbol: str = "AAPL", n: int = 35) -> list[Bar]:
+    """Generate bars where neither breakout nor MA cross fires (flat, no
+    volume spike, no MA cross)."""
+    bars: list[Bar] = []
+    base = Decimal("100.00")
+    for i in range(n):
+        bars.append(
+            Bar(
+                symbol=symbol,
+                freq="1d",
+                ts=_ts(i),
+                open=base,
+                high=base + Decimal("0.10"),
+                low=base - Decimal("0.10"),
+                close=base,
+                volume=Decimal("100000"),
+            )
+        )
+    return bars
+
+
+def _bar_provider_returning(bars: list[Bar] | None):
+    """Build a BarProvider that always returns the given bars list."""
+    async def provider(symbol: str) -> list[Bar] | None:
+        return bars
+    return provider
 
 
 # ---------- notify ----------
@@ -155,10 +236,12 @@ async def test_dry_run_no_intent_enqueues_as_no_action(session):
 
 
 @pytest.mark.asyncio
-async def test_auto_with_intent_calls_broker(session):
+async def test_auto_with_intent_and_confirmation_calls_broker(session):
+    """auto + intent + breakout-confirmation passes → broker called."""
     submitter = _FakeSubmitter()
+    bp = _bar_provider_returning(_bars_breakout())
     dossier = _dossier("auto", with_intent=True)
-    result = await route_decision(_ctx(session, submitter), dossier)
+    result = await route_decision(_ctx(session, submitter, bar_provider=bp), dossier)
 
     assert len(submitter.calls) == 1
     intent, reasoning = submitter.calls[0]
@@ -169,6 +252,7 @@ async def test_auto_with_intent_calls_broker(session):
     assert result.order is not None
     assert result.order.client_order_id == intent.client_order_id
     assert result.pending_signal_id is None, "auto must NOT enqueue a pending_signal"
+    assert result.confirmation_blocked is False
 
 
 @pytest.mark.asyncio
@@ -180,6 +264,86 @@ async def test_auto_no_intent_does_not_call_broker(session):
     assert result.no_action is True
     assert result.pending_signal_id is None
     assert result.order is None
+
+
+# ---------- technical confirmation gate (auto mode only) ----------
+
+
+@pytest.mark.asyncio
+async def test_auto_blocks_without_bar_provider(session):
+    """auto + intent + NO bar_provider → confirmation blocked, broker NOT called."""
+    submitter = _FakeSubmitter()
+    result = await route_decision(_ctx(session, submitter), _dossier("auto", with_intent=True))
+    assert submitter.calls == [], "auto must NOT call broker without confirmation"
+    assert result.confirmation_blocked is True
+    assert "no bar provider" in (result.confirmation_reason or "").lower()
+    assert result.order is None
+
+
+@pytest.mark.asyncio
+async def test_auto_blocks_when_bars_insufficient(session):
+    """auto + intent + bar_provider returns None → blocked."""
+    submitter = _FakeSubmitter()
+    bp = _bar_provider_returning(None)
+    result = await route_decision(
+        _ctx(session, submitter, bar_provider=bp), _dossier("auto", with_intent=True)
+    )
+    assert submitter.calls == []
+    assert result.confirmation_blocked is True
+    assert "insufficient" in (result.confirmation_reason or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_auto_blocks_when_no_signal_fires(session):
+    """auto + intent + flat bars (no breakout, no MA cross) → blocked."""
+    submitter = _FakeSubmitter()
+    bp = _bar_provider_returning(_bars_no_confirmation())
+    result = await route_decision(
+        _ctx(session, submitter, bar_provider=bp), _dossier("auto", with_intent=True)
+    )
+    assert submitter.calls == []
+    assert result.confirmation_blocked is True
+    assert "no technical confirmation" in (result.confirmation_reason or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_auto_short_side_falls_through_confirmation_gate(session):
+    """auto + SELL intent → confirmation gate doesn't block (long-only gate);
+    risk gate is the path. v1 is long-only by default so this is a
+    contract-level test: shorts don't get filtered by THIS gate."""
+    submitter = _FakeSubmitter()
+    # No bar_provider — that would block a BUY but should not block a SELL.
+    dossier = _dossier("auto", with_intent=True)
+    # Mutate the intent's side to SELL
+    sell_intent = OrderIntent(
+        symbol=dossier.proposed.intent.symbol,
+        side=OrderSide.SELL,
+        qty=dossier.proposed.intent.qty,
+        type=OrderType.MARKET,
+    )
+    object.__setattr__(dossier.proposed, "intent", sell_intent)
+    result = await route_decision(_ctx(session, submitter), dossier)
+    assert result.confirmation_blocked is False, (
+        "v1's confirmation gate is long-only; SELL must fall through "
+        "this gate. (Shorts are not yet supported but the gate must "
+        "not falsely claim to govern them.)"
+    )
+    assert len(submitter.calls) == 1, "SELL went through to broker"
+
+
+@pytest.mark.asyncio
+async def test_confirmation_blocked_auto_does_not_enqueue(session):
+    """When auto is blocked by confirmation, no pending_signal is enqueued.
+    Same invariant as risk-blocked auto: auto commits to act-or-skip, not
+    queue-for-human. The operator emits again next event cycle if confirmation
+    arrives."""
+    submitter = _FakeSubmitter()
+    result = await route_decision(_ctx(session, submitter), _dossier("auto", with_intent=True))
+    assert result.confirmation_blocked is True
+    assert result.pending_signal_id is None
+    stmt = select(PendingSignal)
+    rows = (await session.execute(stmt)).scalars().all()
+    assert rows == []
 
 
 # ---------- persistence side-effects ----------
