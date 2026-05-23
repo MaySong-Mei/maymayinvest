@@ -161,10 +161,6 @@ def _is_modification(status: str) -> bool:
 
 def main() -> int:
     diff = _staged_diff()
-    if not diff:
-        # Nothing staged. Let git handle whatever's happening.
-        return 0
-
     files = _staged_files_status()
     msg = _commit_message()
 
@@ -172,20 +168,30 @@ def main() -> int:
     triggers: list[str] = []
 
     # Trigger 1: modification (not pure add) on review-required surface.
+    # Skipped when there's no staged diff (e.g. --allow-empty), since
+    # there are no files to inspect.
     for status, path in files:
         if _is_modification(status) and _matches_surface(path, REVIEW_REQUIRED_PATTERNS):
             triggers.append(
                 f"modifies review-required artifact: {path} (status={status})"
             )
 
-    # Trigger 2: keyword in commit message suggesting re-interpret/binding action.
+    # Trigger 2: keyword in commit message suggesting re-interpret/binding
+    # action. Runs UNCONDITIONALLY — including on empty commits. This
+    # closes the empty-commit bypass: an empty `--allow-empty` commit
+    # whose message contains a governance keyword (e.g. "amendment",
+    # "recount", "binding artifact") is now caught here.
+    # See PHILOSOPHY.md "Append-only operator invariant" — first
+    # discovered when commit 1519537 (a corrigendum) bypassed via empty
+    # diff. Reviewer a3441000d2edaf2f4 audited and recommended this fix.
     msg_lower = msg.lower()
     for kw in KEYWORD_TRIGGERS:
         if kw in msg_lower:
             triggers.append(f"commit message contains review-trigger keyword: {kw!r}")
             break  # one keyword hit is enough
 
-    # No triggers? Free append. Allow.
+    # No triggers? Free append (or empty commit with no governance
+    # keywords). Allow.
     if not triggers:
         return 0
 
