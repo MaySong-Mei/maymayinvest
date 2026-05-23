@@ -280,4 +280,17 @@ This is itself a non-trivial change to the project's understanding of `ambiguous
 
 ## Approval
 
-(To be filled by user when merging.)
+**Decision**: WITHDRAWN
+**Decided by**: user (direct in-conversation, 2026-05-23)
+**Decision rationale**: Accept the operator's recommendation D. Dialogue reviewer's verdict-pass landed `right_bet` on dossier-only basis, and Part 3 risks #1–#5 are all substantive. Hand-crafted decision-ambiguity is being recorded as a v1 finding (the `ambiguous` verdict may be a narrow category that v1 cannot manufacture), not a v1 gap.
+**Cool-down**: not applicable — withdrawal does not establish a change. However, the proposal file itself stays in `proposals/` as audit history.
+
+### What this proposal taught the project
+
+1. **Dialogue reviewer can recommend NOT to make a change**, not just to make one. First exercise of this direction (commit `62bc531` was a recommend-DO; this is a recommend-DON'T). The role works in both directions — important because a yes-only reviewer would just be permission theater.
+
+2. **Operator confirmation bias is real and recent.** The operator authored CASE_6 immediately after the case-3 relabel landed. The case-3 lesson — "decision-ambiguous is narrower than situation-ambiguous" — was forgotten in the next fixture authoring. Without the dialogue reviewer pass, this proposal would likely have been merged.
+
+3. **Hand-crafted decision-ambiguity may be structurally unreachable.** Dialogue reviewer's Part 3 #3: "If the operator can articulate the tension clearly enough to write a fixture, the tension is articulable enough for a careful reviewer to resolve." The v1 eval set may simply not need an `ambiguous` fixture — that's a feature, not a gap.
+
+4. **The previous follow-up task is dissolved, not transformed.** Commit `8ad69eb`'s eval-doc addendum said "a separate proposal should author a NEW case where decision-quality is genuinely hard to judge." This proposal was that attempt. It failed not by getting the case wrong but by being the wrong KIND of task. The new follow-up is passive: if a real-analyzer dossier ever ends up labeled `ambiguous` in production usage, **that** could become a fixture later. We do not pursue hand-crafted ambiguous fixtures further.
