@@ -1,0 +1,19 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. CLASS 1 (buyback + earnings ambiguous, post-close, no immediate confirmation possible) fixture — first class-1 in the corpus diversity plan after the AAPL fixture was burned by metadata leak contamination. Mega-cap semiconductor company simultaneously announces Q3 EPS beat (without guide change), 8% dividend raise, and $20B buyback expansion. Different sector, different surprise pattern, and different buyback scale than the burned AAPL fixture so this is a genuine independent observation rather than a near-duplicate. Ticker, company, and figures are illustrative; structure paraphrases how 8-K Items 2.02 + 8.01 typically appear together for post-close mega-cap earnings + capital-return announcements. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0005824671",
+    "name": "Cascade Semiconductor Inc.",
+    "ticker": "CSCS"
+  },
+  "filed_at": "2024-10-29T16:15:00-04:00",
+  "accepted_at": "2024-10-29T16:15:18-04:00",
+  "items": ["2.02 Results of Operations and Financial Condition", "8.01 Other Events", "9.01 Financial Statements and Exhibits"],
+  "headline": "Cascade Semiconductor reports Q3 EPS above consensus, raises quarterly dividend 8%, authorizes additional $20 billion share repurchase program",
+  "body": "Cascade Semiconductor Inc. (NASDAQ: CSCS) today announced financial results for the third quarter of fiscal 2024, ended September 28, 2024. Revenue was $14.21 billion, an increase of 6.8% year over year, compared to consensus expectations of $14.05 billion. Adjusted diluted earnings per share were $2.18, above consensus expectations of $2.05 and prior-year Q3 of $1.93. Data center revenue was $5.84 billion (up 11% YoY), automotive and embedded $2.91 billion (down 4% YoY), client computing $4.12 billion (up 7% YoY), and other segments $1.34 billion. Gross margin was 58.3%, compared to 57.1% in the prior-year quarter. The Company did not update its full-year fiscal 2024 guidance, which remains in the range of $55-57 billion in revenue and $7.80-$8.20 in adjusted diluted EPS. The Board of Directors declared a quarterly cash dividend of $0.54 per share, an 8% increase from the prior $0.50, payable on December 12, 2024 to shareholders of record as of November 21, 2024. The Board also authorized an additional $20 billion share repurchase program, in addition to approximately $4.5 billion remaining under the prior authorization. Management will host a conference call to discuss the results today at 5:00 p.m. ET.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated October 29, 2024"},
+    {"type": "EX-99.2", "description": "Q3 fiscal 2024 financial commentary"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0005824671&type=8-K"
+}
