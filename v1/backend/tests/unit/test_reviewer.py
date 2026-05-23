@@ -31,6 +31,7 @@ from app.intel.reviewer.claude_code import (
     ReviewerError,
     SubprocessResult,
     SubprocessRunner,
+    _build_subprocess_env,
     _parse_verdict_json,
 )
 from app.intel.reviewer.stub import StubReviewer
@@ -293,3 +294,74 @@ async def test_review_pipeline_outcome_blind(session):
     assert "outcome" not in snapshot
     # Real info is preserved
     assert "event_payload" in snapshot
+
+
+# ---------- _build_subprocess_env: auth priority paths ----------
+
+
+def test_build_env_path1_oauth_token_strips_api_key(monkeypatch):
+    """Path 1: CLAUDE_CODE_OAUTH_TOKEN set → forwarded; ANTHROPIC_API_KEY stripped.
+
+    Critical invariant: ANTHROPIC_API_KEY MUST be removed when OAuth token
+    is present. Even a non-empty API key would out-precede the OAuth token
+    in claude's auth chain and break the subprocess. An empty API key
+    (the poison case from the parent CC session) would 401 the call.
+    """
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat01-test-token")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")  # the parent CC poison case
+    env = _build_subprocess_env()
+    assert env["CLAUDE_CODE_OAUTH_TOKEN"] == "sk-ant-oat01-test-token"
+    assert "ANTHROPIC_API_KEY" not in env, (
+        "ANTHROPIC_API_KEY must be absent when OAuth token is present"
+    )
+
+
+def test_build_env_path1_oauth_overrides_real_api_key(monkeypatch):
+    """OAuth token wins even over a non-empty API key — caller has opted into
+    subscription billing by setting CLAUDE_CODE_OAUTH_TOKEN."""
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat01-token")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api03-realkey")
+    env = _build_subprocess_env()
+    assert env["CLAUDE_CODE_OAUTH_TOKEN"] == "sk-ant-oat01-token"
+    assert "ANTHROPIC_API_KEY" not in env
+
+
+def test_build_env_path2_api_key_only(monkeypatch):
+    """Path 2: API customer, no OAuth token. API key forwarded unchanged."""
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api03-realkey")
+    env = _build_subprocess_env()
+    assert env["ANTHROPIC_API_KEY"] == "sk-ant-api03-realkey"
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in env
+
+
+def test_build_env_path3_fallthrough_strips_empty_api_key(monkeypatch):
+    """Path 3: nothing usable. Strip the empty API-key poison.
+
+    Subprocess will fall through to OAuth keychain, which is known to
+    fail under nested CC. But we don't actively block it — caller may
+    be running from a fresh terminal where keychain works fine.
+    """
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")  # empty / poisoned
+    env = _build_subprocess_env()
+    assert "ANTHROPIC_API_KEY" not in env
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in env
+
+
+def test_build_env_path3_whitespace_api_key_also_stripped(monkeypatch):
+    """Whitespace-only API key counts as poisoned, same as empty."""
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "   ")
+    env = _build_subprocess_env()
+    assert "ANTHROPIC_API_KEY" not in env
+
+
+def test_build_env_path3_whitespace_oauth_token_falls_through(monkeypatch):
+    """Whitespace-only OAuth token counts as absent."""
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "   ")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api03-realkey")
+    env = _build_subprocess_env()
+    # Falls through to Path 2: API key wins, no OAuth token forwarded
+    assert env["ANTHROPIC_API_KEY"] == "sk-ant-api03-realkey"
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in env or not env["CLAUDE_CODE_OAUTH_TOKEN"].strip()

@@ -21,16 +21,34 @@ Failure modes handled:
   - the reviewer MUST NOT silently default; a parse error is preferable
     to a "right_bet by accident" that poisons the supervised dataset
 
-Auth note (discovered 2026-05-23, see
+Auth note (final design 2026-05-23, see
 v1/docs/evals/reviewer-v1-2026-05-22.md):
-When this code runs from inside a Claude Code session, the parent
-process exports `ANTHROPIC_API_KEY=` (empty string) in its env.
-The child subprocess inherits that empty value, and claude's auth
-chain prioritizes ANTHROPIC_API_KEY over OAuth keychain — sending
-an empty bearer token to the API and getting 401. The default
-runner scrubs that empty value so OAuth keychain auth (from
-~/.claude/.credentials.json) takes precedence. Explicit non-empty
-ANTHROPIC_API_KEY is preserved (it's a deliberate override).
+The supported auth path for subprocess `claude -p` from a Pro/Max
+subscription is `CLAUDE_CODE_OAUTH_TOKEN`, populated by a one-time
+`claude setup-token` run by the human in an external terminal.
+
+The default subprocess env is built like this:
+  1. If CLAUDE_CODE_OAUTH_TOKEN is set in the parent env: forward it
+     to the child, and STRIP ANTHROPIC_API_KEY entirely (it
+     out-precedes the OAuth token in claude's auth chain).
+  2. Else if ANTHROPIC_API_KEY is non-empty: forward it as-is
+     (deliberate user override; behaves like a normal API customer).
+  3. Else: strip ANTHROPIC_API_KEY (which is empty-string-poisoned
+     by the parent CC session) and forward nothing — falls through
+     to OAuth keychain. Known to fail under nested CC due to OAuth
+     refresh race; documented but kept as a fall-through path.
+
+Path 1 is the only path that works reliably for subscription users
+running this from inside another Claude Code session.
+
+Lifecycle note for path 1:
+  - `claude setup-token` mints a token good for ~1 year.
+  - Subscription users: usage draws from Pro/Max inference quota
+    (no extra billing) for now.
+  - Per Anthropic docs (as of 2026-05-23 surveyed by prober
+    a1ab74beec13b4b1f): starting 2026-06-15, Agent SDK / `claude -p`
+    usage may draw from a separate monthly Agent SDK credit pool.
+    Re-check billing model when this date approaches.
 
 Testing: this module is tested with a mocked subprocess runner so unit
 tests do not require Claude Code to be installed. The injection point
@@ -85,26 +103,45 @@ class SubprocessRunner(Protocol):
 def _build_subprocess_env() -> dict[str, str]:
     """Construct the env passed to the claude subprocess.
 
-    Critical: scrub `ANTHROPIC_API_KEY` if and only if it is the empty
-    string. The Claude Code parent process exports `ANTHROPIC_API_KEY=`
-    (empty) into its env, presumably as a marker. Children that
-    blindly inherit it send "" as a bearer token to the API and get 401.
+    Three paths, in priority order:
 
-    We:
-      - keep ANTHROPIC_API_KEY if it has a real (non-empty) value
-        (explicit user override)
-      - drop ANTHROPIC_API_KEY if it's empty or whitespace-only
-        (the poison case)
-      - leave everything else alone
+      Path 1 (preferred, subscription users): if
+        CLAUDE_CODE_OAUTH_TOKEN is set and non-empty, forward it and
+        STRIP ANTHROPIC_API_KEY entirely. ANTHROPIC_API_KEY
+        out-precedes OAuth token in claude's auth chain — if a
+        poisoned empty ANTHROPIC_API_KEY were left in, it would
+        beat the OAuth token and we'd 401.
 
-    OAuth keychain auth via ~/.claude/.credentials.json takes over when
-    ANTHROPIC_API_KEY is absent, which is what we want for Pro/Max
-    subscription users running this from inside a Claude Code session.
+      Path 2 (API customers): if ANTHROPIC_API_KEY is non-empty,
+        leave it alone. claude will use it directly.
+
+      Path 3 (fall-through): strip empty ANTHROPIC_API_KEY and let
+        claude try OAuth keychain. This path is known to fail under
+        nested Claude Code due to OAuth refresh race (see
+        v1/docs/evals/reviewer-v1-2026-05-22.md). Kept only so a
+        user running from a fresh terminal can use it without having
+        to setup-token.
+
+    Returns the full env dict; caller passes it to subprocess.
     """
     env = dict(os.environ)
-    val = env.get("ANTHROPIC_API_KEY", "").strip()
-    if not val:
+    oauth_token = env.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+    api_key = env.get("ANTHROPIC_API_KEY", "").strip()
+
+    if oauth_token:
+        # Path 1: subscription token wins; ANTHROPIC_API_KEY must be absent
+        # so it doesn't out-precede the OAuth token.
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = oauth_token
         env.pop("ANTHROPIC_API_KEY", None)
+    elif api_key:
+        # Path 2: explicit API key (non-empty); leave env alone.
+        pass
+    else:
+        # Path 3: nothing usable in env. Strip empty ANTHROPIC_API_KEY
+        # so claude doesn't try to use it as a bearer token. Falls
+        # through to OAuth keychain (which races inside nested CC).
+        env.pop("ANTHROPIC_API_KEY", None)
+
     return env
 
 
