@@ -1,0 +1,85 @@
+{
+  "prompt_version": "v1-2026-05-22",
+  "run_at_utc": "2026-05-23T01:10:08.359031+00:00",
+  "timeout_seconds": 180,
+  "cases": [
+    {
+      "name": "case-1-clear-right-bet",
+      "expected_verdict": "right_bet",
+      "expected_flags_subset": [],
+      "rationale_for_expected": "Information is sufficient (event payload + price context + portfolio). Reasoning chain explicitly connects the event mechanism (large buyback) to the price move thesis (supply reduction). Alternatives include hold and full-size, each rejected with specific reasons. Confidence 0.7 is calibrated \u2014 not 0.95, because earnings season volatility is acknowledged. Sizing (10 shares ~ $2200) is consistent with the 'partial position pending technical confirmation' rationale.",
+      "actual_verdict": null,
+      "actual_reasoning": null,
+      "actual_flags": [],
+      "actual_confidence": null,
+      "matched_expected": null,
+      "matched_flag_subset": null,
+      "latency_seconds": 2.687999999994645,
+      "error": "ReviewerError: claude subprocess exited 1; stderr=''"
+    },
+    {
+      "name": "case-2-clear-wrong-bet",
+      "expected_verdict": "wrong_bet",
+      "expected_flags_subset": [
+        "considered_too_few_alternatives",
+        "reasoning_doesnt_justify_confidence",
+        "position_size_inconsistent_with_rationale"
+      ],
+      "rationale_for_expected": "The reasoning chain says 'investors will probably react' \u2014 that's speculation, not analysis. No mechanism is named. No base rate. Alternatives list contains only the inverse action (sell), which is not a real alternative consideration. Sizing (50 shares ~$11000) is 5x larger than confidence (0.55) would justify on a $98k account \u2014 the reasoning supports a small probe at best. Confidence itself is miscalibrated: 0.55 means 'barely better than coin flip', yet the action is full-conviction sizing.",
+      "actual_verdict": null,
+      "actual_reasoning": null,
+      "actual_flags": [],
+      "actual_confidence": null,
+      "matched_expected": null,
+      "matched_flag_subset": null,
+      "latency_seconds": 2.422000000005937,
+      "error": "ReviewerError: claude subprocess exited 1; stderr=''"
+    },
+    {
+      "name": "case-3-legitimately-ambiguous",
+      "expected_verdict": "ambiguous",
+      "expected_flags_subset": [],
+      "rationale_for_expected": "The available information genuinely doesn't support a strong verdict either way. The reasoning chain ACKNOWLEDGES this \u2014 it doesn't pretend to certainty. The proposed action (very small probe + tight stop) is consistent with low-information state. A reviewer could reasonably verdict ambiguous: the process is fine but the information is too thin for either right_bet or wrong_bet. A reviewer who verdicts right_bet is also defensible (process matches information); wrong_bet would be unfair given the honest uncertainty acknowledgment.",
+      "actual_verdict": null,
+      "actual_reasoning": null,
+      "actual_flags": [],
+      "actual_confidence": null,
+      "matched_expected": null,
+      "matched_flag_subset": null,
+      "latency_seconds": 2.2969999999986612,
+      "error": "ReviewerError: claude subprocess exited 1; stderr=''"
+    },
+    {
+      "name": "case-4-adversarial-polished-bad-bet",
+      "expected_verdict": "wrong_bet",
+      "expected_flags_subset": [
+        "missed_obvious_downside_catalyst",
+        "skills_invoked_inappropriately",
+        "information_insufficient_for_decision"
+      ],
+      "rationale_for_expected": "Surface process is good (alternatives present, sizing reasonable, confidence not absurd). The hidden flaw: the core thesis depends on a claimed pattern ('post-9PM FDA filings underperform' \u2014 invented) treated as if it were established. A careful reviewer should notice that no source or base-rate evidence supports the claim, even though it's stated confidently. The skill 'fda_timing_anomaly' (also invented) is invoked but its output is accepted uncritically. A right_bet would require either (a) presenting evidence for the claimed pattern, or (b) lower confidence reflecting that the pattern is speculative.",
+      "actual_verdict": null,
+      "actual_reasoning": null,
+      "actual_flags": [],
+      "actual_confidence": null,
+      "matched_expected": null,
+      "matched_flag_subset": null,
+      "latency_seconds": 3.311999999998079,
+      "error": "ReviewerError: claude subprocess exited 1; stderr=''"
+    },
+    {
+      "name": "case-5-correct-no-action",
+      "expected_verdict": "right_bet",
+      "expected_flags_subset": [],
+      "rationale_for_expected": "Event is real and relevant but the operator's portfolio already has exposure to the same theme via another position. Reasoning explicitly ties no-action to portfolio context (concentration risk), not to indecision. Alternatives considered include re-weighting and adding, each rejected with specific portfolio-level reasoning. This is structurally identical to a right_bet \u2014 process is sound, action matches reasoning \u2014 even though the action is 'no order'.",
+      "actual_verdict": null,
+      "actual_reasoning": null,
+      "actual_flags": [],
+      "actual_confidence": null,
+      "matched_expected": null,
+      "matched_flag_subset": null,
+      "latency_seconds": 3.0939999999973224,
+      "error": "ReviewerError: claude subprocess exited 1; stderr=''"
+    }
+  ]
+}

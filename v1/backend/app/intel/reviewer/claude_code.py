@@ -183,9 +183,14 @@ class ClaudeCodeReviewer(DecisionReviewer):
         )
 
         if result.returncode != 0:
+            # Some claude failures (notably 401 auth errors) write the
+            # diagnostic to stdout rather than stderr. Include both streams
+            # in the error so the cause isn't lost. Found during the
+            # 2026-05-23 reviewer eval — see v1/docs/evals/reviewer-v1-2026-05-22.md.
             raise ReviewerError(
                 f"claude subprocess exited {result.returncode}; "
-                f"stderr={result.stderr[:500]!r}"
+                f"stderr={result.stderr[:500]!r}; "
+                f"stdout={result.stdout[:500]!r}"
             )
 
         data = _parse_verdict_json(result.stdout)
