@@ -321,6 +321,101 @@ The user's framing: goals are not just things to achieve; they are things to **o
 
 ---
 
+## Pre-reg amendment protocol
+
+### What this section is
+
+The "Goal state machine" and "Goal evolution" sections describe how *open-ended goals* evolve. This section addresses a narrower, sharper case: **what happens when a pre-registered rule fires and the operator, looking at the result, believes the rule's disposition is wrong**.
+
+The two questions look similar but their failure modes are inverse:
+
+- Goal evolution failure mode: *governance bloat* — making progress requires endless meta-process.
+- Pre-reg amendment failure mode: *spec-gaming* — operator retroactively reinterprets pre-registered outcomes to avoid dispositions it didn't like.
+
+The protocol below is the *interaction layer* between two existing invariants that this project's framing depends on equally:
+
+- **P1 — Pre-registered rules are binding once outcome arrives.** Without this, pre-registration is theater; the operator can always "decide differently" once results land.
+- **P2 — Goals/rules/prompts can evolve through structured proposals.** Without this, the system cannot incorporate genuine learning (e.g. discovering a higher-order invariant the pre-reg rule violated).
+
+Both invariants are necessary. Their conflict at the moment of "rule fired, operator wants to amend" needs an explicit protocol, not operator judgment.
+
+### Quote that prompted this section (2026-05-23)
+
+> "如果明天下雨，我就取消比赛。第二天但我现在觉得小雨其实可以比赛，所以我提议改规则。我能理解现在的困境是既当裁判又当运动员的子问题。所以我觉得应该按照某种流程 file 一个修正案去修正设计，当情况是执行了，但是再有新的现实或者推论出现的时候，回头修正标准的问题。"
+
+The "judge and athlete" framing names the structural problem this protocol solves: an operator looking at a pre-registered rule it triggered cannot also be the impartial judge of whether the rule should be amended. The protocol forces the judging role onto a fresh-brain reviewer + human, while preserving the operator's responsibility to surface evidence.
+
+### The protocol (8 clauses, user-authored)
+
+1. **A triggered pre-registered rule must first be acknowledged as triggered.**
+
+2. **The operator may not reinterpret the outcome to avoid the triggered disposition.** Re-running the binning logic with a different metric, recomputing thresholds, or "deciding the outcome doesn't really mean what it says" are all forbidden. The outcome is what the pre-registered rule defined as the outcome.
+
+3. **If executing the disposition appears to violate a higher-order invariant or newly discovered constraint, the operator may file an amendment.** Filing is permitted; outcome itself is not the basis for filing.
+
+4. **The amendment must include**:
+    - Raw evidence (links / paths to all artifacts the reviewer could need)
+    - Original rule (verbatim, with commit hash where it was locked)
+    - Observed outcome (verbatim, with commit hash where it was recorded)
+    - Original disposition (what the rule said to do)
+    - Proposed revision (what should change going forward)
+    - **Why this is not outcome-regret** (the load-bearing field; specifically argue why the desire to amend is grounded in new information, not in disliking the outcome)
+
+5. **A fresh-brain reviewer must review the evidence packet and may request reproduction.** Reviewer has authority to ask for additional artifacts, to ask for trial re-runs, or to refuse on insufficient-evidence grounds.
+
+6. **Until approved, the old rule remains the historical judgment.** The pre-registered rule's verdict on the observed outcome stands as the historical record regardless of whether the operator agrees with it.
+
+7. **Approved amendments affect future handling; they do not erase the old judgment.** The amendment commits to a different disposition next time a similar rule fires. It does NOT rewrite history saying "the rule never fired" or "the rule's old disposition was wrong all along." Git log + the original commit are the historical truth.
+
+8. **Reversals require human approval.** Reversion of an approved amendment back to the original rule (or to a different revision) is itself an amendment and requires human approval.
+
+### Three operational clarifications (operator-added)
+
+These clarify how clauses 3, 5, and 8 are applied in practice:
+
+**Clarification on clause 3 (outcome-regret vs new information)**: The "newly discovered constraint" basis is the place where this protocol is most vulnerable to spec-gaming. To resist it: the amendment's "why-not-outcome-regret" field (clause 4) MUST be explicitly graded by the reviewer (clause 5). The reviewer's review packet asks: "is this amendment grounded in something the operator could not have known when authoring the pre-reg, or is it grounded in the operator disliking the outcome the pre-reg produced?" The reviewer SHOULD reject amendments that look like outcome-regret in technical clothing.
+
+**Clarification on clause 5 (reproduction forms)**: Fresh-brain reviewers in this project are typically Claude-Code subagents. They cannot run live `claude -p` subprocesses (no OAuth context). So "reproduction" has two forms:
+
+- **Form A (operator reproduces, reviewer audits)**: reviewer asks for a re-run of a specific trial; operator produces it and supplies raw JSON; reviewer compares.
+- **Form B (reviewer recomputes from artifacts)**: reviewer re-derives bin assignments / analysis from the raw output the operator provided.
+
+Form A is slower but verifies *source data*. Form B is fast but only verifies *analysis correctness*. The reviewer chooses based on what's at stake. Amendments where source data integrity is questioned default to Form A.
+
+**Clarification on clause 8 (what "reversal" means)**: Reversal = reverting an *approved* amendment back to the original rule, OR replacing it with a different revision. Filing the original amendment (clause 3) does NOT count as reversal. Filing a *new* amendment that modifies a previously-approved amendment IS a reversal.
+
+### Bootstrap exception (one-time)
+
+This section itself was not authored through the amendment protocol — it IS the amendment protocol. The protocol cannot self-bootstrap. Authoring this section was a direct human-and-operator decision (commit `153323c` discussion thread).
+
+This is the only such grandfathering allowed. All future changes to the protocol itself, or to other framework-level invariants, must go through the protocol.
+
+### When this applies vs. when "Goal evolution" applies
+
+| Situation | Applies |
+|---|---|
+| Pre-registered rule fired with locked disposition; operator wants different disposition | **Pre-reg amendment protocol** (this section) |
+| Goal under active development; operator wants to refine its definition | Goal evolution (earlier section) |
+| Reviewer prompt needs a flag added; no pre-reg rule fired | Goal evolution |
+| Risk gate caps need adjustment after weeks of data | Goal evolution |
+| Reviewer prompt produced unexpected result on a hand-crafted fixture | If the fixture had a pre-registered expected verdict, amendment protocol; otherwise goal evolution |
+
+The two protocols share machinery (proposals/ dir, cool-down, human approval gate). They differ in: amendment protocol has the stricter clause-2 prohibition on outcome reinterpretation, and the explicit "why-not-outcome-regret" defense burden.
+
+### What this protocol is NOT
+
+- It is not a way to escape pre-registration. Outcome reinterpretation is forbidden (clause 2). The original judgment stands (clause 6) regardless of amendment outcome.
+- It is not "all rules are advisory." The protocol exists *because* pre-registration must remain binding; amendment is a narrow, evidence-gated exception, not a routine override.
+- It is not infinitely recursive. Bootstrap exception (above) is the only grandfathering. Otherwise: amendments themselves go through the amendment protocol.
+
+### Why this matters for the project's long-term integrity
+
+A self-evolving CC-as-operator system that lets the operator quietly reinterpret rules after seeing results would, over time, drift toward whatever decisions the operator post-hoc rationalizes as "the rule must have meant this." That is exactly the spec-gaming failure mode the project was designed to resist. The amendment protocol gives the operator a legitimate channel to surface genuine new information, while structurally preventing the channel from being used for outcome-regret.
+
+If the protocol's clauses are honored, future readers of git history can always tell: "the rule fired, the original disposition was X, an amendment was filed with reasoning Y, fresh-brain reviewer judged Z, human approved/rejected." All four pieces stay in the record.
+
+---
+
 ## Anchoring quotes (from 2026-05-22 conversation)
 
 These are kept because they are the ground truth of *why* this project is shaped this way. If a future implementation decision contradicts these, the implementation is wrong, not the quotes.
