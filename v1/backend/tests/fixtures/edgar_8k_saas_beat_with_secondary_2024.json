@@ -1,0 +1,19 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. Second CLASS 1 (buyback + earnings ambiguous, post-close, no immediate confirmation possible) fixture. Large-cap SaaS company beat + guide raise (clearly positive) paired with announcement of a $1.5B secondary offering of existing-holder shares (dilution wrinkle that makes the net signal genuinely ambiguous). Different from K=6 Cascade (semi, beat + buyback + dividend, no negative wrinkle). Designed to test the K=8-revised hypothesis 'disagreement correlates with positive headline + no widely-held counter-pointing base rate' — secondary offerings DO have a known negative base rate (dilution overhang) so this fixture should produce unanimity if hypothesis holds. Ticker, company, figures illustrative. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0008163492",
+    "name": "Beacon Cloud Software Inc.",
+    "ticker": "BCSI"
+  },
+  "filed_at": "2024-11-06T16:02:00-05:00",
+  "accepted_at": "2024-11-06T16:02:14-05:00",
+  "items": ["2.02 Results of Operations and Financial Condition", "8.01 Other Events", "9.01 Financial Statements and Exhibits"],
+  "headline": "Beacon Cloud Software reports Q3 results above consensus, raises full-year guidance; certain existing shareholders to commence $1.5 billion secondary offering",
+  "body": "Beacon Cloud Software Inc. (NASDAQ: BCSI) today reported financial results for the third quarter ended September 30, 2024. Total revenue was $1.42 billion, an increase of 24% year over year, compared to consensus expectations of $1.36 billion. Subscription revenue grew 27% year over year to $1.31 billion. Non-GAAP diluted earnings per share were $0.92, above consensus of $0.81 and prior-year Q3 of $0.61. Annual recurring revenue (ARR) at quarter-end was $5.85 billion, up 28% year over year. Net dollar retention was 119%, compared to 117% in the prior quarter. The Company raised its full-year fiscal 2024 guidance: revenue is now expected in the range of $5.62-5.66 billion (prior $5.48-5.54 billion, consensus $5.52 billion), and non-GAAP diluted EPS is now expected in the range of $3.45-3.52 (prior $3.20-3.30, consensus $3.27). Separately, the Company announced that certain affiliated funds of its largest pre-IPO shareholders intend to commence a registered secondary offering of approximately 22 million shares of common stock, representing approximately $1.5 billion at recent market prices. The Company will not receive any proceeds from the secondary offering. Management noted that the participating funds had been holders since the Company's 2021 initial public offering and that the offering reflects normal-course portfolio rebalancing rather than any change in fundamental view. Management will host a conference call to discuss the quarterly results today at 5:00 p.m. ET. The lead underwriters on the secondary offering have been mandated to launch the offering subject to market conditions.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated November 6, 2024 (quarterly results)"},
+    {"type": "EX-99.2", "description": "Press release dated November 6, 2024 (secondary offering announcement)"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0008163492&type=8-K"
+}
