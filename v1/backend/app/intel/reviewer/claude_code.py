@@ -21,6 +21,17 @@ Failure modes handled:
   - the reviewer MUST NOT silently default; a parse error is preferable
     to a "right_bet by accident" that poisons the supervised dataset
 
+Auth note (discovered 2026-05-23, see
+v1/docs/evals/reviewer-v1-2026-05-22.md):
+When this code runs from inside a Claude Code session, the parent
+process exports `ANTHROPIC_API_KEY=` (empty string) in its env.
+The child subprocess inherits that empty value, and claude's auth
+chain prioritizes ANTHROPIC_API_KEY over OAuth keychain — sending
+an empty bearer token to the API and getting 401. The default
+runner scrubs that empty value so OAuth keychain auth (from
+~/.claude/.credentials.json) takes precedence. Explicit non-empty
+ANTHROPIC_API_KEY is preserved (it's a deliberate override).
+
 Testing: this module is tested with a mocked subprocess runner so unit
 tests do not require Claude Code to be installed. The injection point
 is `runner` on ClaudeCodeReviewer.
@@ -29,6 +40,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from decimal import Decimal
@@ -70,6 +82,32 @@ class SubprocessRunner(Protocol):
     ) -> SubprocessResult: ...
 
 
+def _build_subprocess_env() -> dict[str, str]:
+    """Construct the env passed to the claude subprocess.
+
+    Critical: scrub `ANTHROPIC_API_KEY` if and only if it is the empty
+    string. The Claude Code parent process exports `ANTHROPIC_API_KEY=`
+    (empty) into its env, presumably as a marker. Children that
+    blindly inherit it send "" as a bearer token to the API and get 401.
+
+    We:
+      - keep ANTHROPIC_API_KEY if it has a real (non-empty) value
+        (explicit user override)
+      - drop ANTHROPIC_API_KEY if it's empty or whitespace-only
+        (the poison case)
+      - leave everything else alone
+
+    OAuth keychain auth via ~/.claude/.credentials.json takes over when
+    ANTHROPIC_API_KEY is absent, which is what we want for Pro/Max
+    subscription users running this from inside a Claude Code session.
+    """
+    env = dict(os.environ)
+    val = env.get("ANTHROPIC_API_KEY", "").strip()
+    if not val:
+        env.pop("ANTHROPIC_API_KEY", None)
+    return env
+
+
 class _DefaultRunner(SubprocessRunner):
     """Real subprocess runner. Spawns claude -p, pipes prompt on stdin."""
 
@@ -85,6 +123,7 @@ class _DefaultRunner(SubprocessRunner):
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=_build_subprocess_env(),
         )
         try:
             stdout_b, stderr_b = await asyncio.wait_for(
