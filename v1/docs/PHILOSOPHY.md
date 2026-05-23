@@ -204,6 +204,123 @@ None of this guarantees the human doesn't drift. But it makes drift visible afte
 
 ---
 
+## Goal state machine
+
+The "Goal evolution" section above pins **the mechanism by which goals can change**. This section pins **the runtime state machine of a goal in flight** — how attempts, failures, and accumulated evidence move a goal toward "completed" or "needs revision."
+
+This is a refinement, not a replacement. Both are needed: the mechanism (proposals, cool-down, human approval) describes governance; the state machine describes operations.
+
+### The state machine
+
+```
+                  ┌──────────────────┐
+                  │   goal active    │
+                  └────────┬─────────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  attempt N   │
+                    └──────┬───────┘
+                           │
+                ┌──────────┴──────────┐
+                ▼                     ▼
+         ┌────────────┐        ┌──────────────┐
+         │ completed  │        │ not completed│
+         └─────┬──────┘        └──────┬───────┘
+               │                      │
+               ▼                      ▼
+        proposal: update         under thresholds?
+        goal forward             (OR logic)
+        (versioned)              ┌────────┴────────┐
+                                 ▼                 ▼
+                              under           thresholds hit:
+                              attempts        REQUIRED dialogue
+                              and cost        with reviewer
+                                 │                 │
+                                 ▼                 ▼
+                              retry          ┌───────┴───────┐
+                              (same goal)    ▼               ▼
+                                          keep goal      propose goal
+                                          (just unlucky) change
+                                                         (via proposals/)
+```
+
+### The thresholds (OR logic — both apply)
+
+Operator MAY retry the same goal silently *only while both* conditions hold:
+
+- **Attempts on this exact goal < 3**
+- **Cumulative cost for this goal < a budget cap**
+  (default in v1: ~$2 of subscription credit equivalent, or ~15 minutes wall time, whichever is the relevant resource)
+
+Once **either** is breached, retry without reviewer dialogue is prohibited. The operator may not "decide" to extend the threshold mid-attempt — that's exactly the spec-gaming entry point the rest of this doc tries to close.
+
+### The two reviewer roles (architecturally separate)
+
+The reviewer that judges trading decisions (or any single dossier) and the reviewer that participates in goal-change dialogues are **different subagents**, even if both are powered by the same underlying LLM.
+
+| | Verdict reviewer | Dialogue reviewer |
+|---|---|---|
+| Input | one DecisionDossier | conversation thread + attempt history + operator's hypothesis about why goal might be wrong |
+| Mode | single-shot, no follow-up | multi-turn (capped at N rounds, default 3) |
+| Knowledge of outcomes | NO (architectural invariant; build_reviewer_input strips outcome fields) | YES — the dialogue reviewer needs to see what happened across attempts to weigh "goal is bad" vs "operator was unlucky" |
+| Output | structured verdict | proposal recommendation: keep-goal / propose-change / escalate-to-human |
+| Persistence | one row in `reviews` table | full transcript in `goal_dialogues` table (TBD) |
+| Replaceability | swap-in different verdict reviewers for cross-check is fine | the dialogue reviewer is conceptually a different role; should not be substituted by verdict reviewer |
+
+**Critical**: the dialogue reviewer is NOT outcome-blind. By design — it must see the attempt history to do its job. This is why it is architecturally separate. **A verdict reviewer that has ever been used as a dialogue reviewer is contaminated and must not be used as a verdict reviewer again**, because it now has outcome priors. Future implementation: separate subagent identities, separate prompts, separate spawn paths.
+
+### Risks of multi-turn dialogue (and mitigations)
+
+Multi-turn opens an attack surface that single-shot doesn't have. Operator gets more chances to "convince" the reviewer of its position. Mitigations:
+
+1. **Cap rounds at 3.** Hard limit. If no resolution in 3, escalate to human.
+2. **Full transcript persisted.** Audit later for "operator was clearly arguing into the reviewer's bias" patterns.
+3. **Reviewer's verdict is non-final**: even after dialogue, any actual goal change goes through `proposals/` flow with cool-down + human approval. The dialogue reviewer recommends; the human approves.
+4. **Operator must declare confidence in its own goal-change hypothesis up front**, before reading reviewer's first response. Prevents anchoring to whatever the reviewer says.
+
+### Worked example: case 3 from the reviewer eval
+
+The first time this state machine matters is now. From the eval addendum just above:
+
+- **Goal under test**: the fixture's `expected_verdict="ambiguous"` for case 3
+- **Attempt**: ran ClaudeCodeReviewer once
+- **Outcome**: reviewer disagreed (`right_bet`), with a substantive argument that the fixture itself partially conceded
+- **Attempt count**: 1
+- **Cost incurred**: ~$0.10 (one claude -p call)
+
+By the state machine, the operator MAY NOT yet treat this as "goal is wrong, change it." Both thresholds are well under:
+
+- attempts < 3 ✓
+- cost < cap ✓
+
+The operator's options:
+- Run the same fixture 1-2 more times, see if reviewer is consistent (if it consistently judges right_bet, the signal is stronger)
+- Inspect the reviewer's argument more carefully — maybe the operator's `ambiguous` label was using the wrong category (situation-ambiguous vs decision-ambiguous, as the reviewer pointed out)
+- Try with slightly perturbed fixtures to see what changes the verdict
+
+Only if the reviewer's disagreement persists across multiple attempts AND the operator can't reconcile it does the operator have grounds to:
+- Open a dialogue with a `goal_change_reviewer` subagent
+- File a proposal in `proposals/` if the dialogue points toward a fixture or label change
+
+This is the right read of "one disagreement is not yet evidence that the goal is wrong." It might be evidence. It might be noise. Wait for a stable pattern.
+
+### Why "completed → update goal" matters too
+
+Goals don't just need revision when they fail. Successful goals should explicitly **complete and be replaced with the next goal** rather than silently moving the bar.
+
+Example: if the right-bet rate on hand-labeled fixtures stabilizes at >80% after several rounds of eval, the goal "demonstrate reviewer viability on hand-labeled cases" is **completed**. The next goal might be "demonstrate reviewer viability on dossiers produced by a real (non-stub) analyzer." This is a separate, harder, well-defined next thing — and it deserves a versioned goal of its own, not a silent extension of "viability" to a moving target.
+
+Closing a goal triggers the same proposals/ workflow as changing one. Both are change events at the framing level.
+
+### Quote that prompted this section (2026-05-23)
+
+> "在 goal 的哲学上我想继续说一个类似的状态机：goal 未完成：再次尝试或者多次尝试积累了语义之后可以调整 goal（因为 goal 可能不合理）（最好有 reviewer 对话讨论）。goal 完成则更新 goal。"
+
+The user's framing: goals are not just things to achieve; they are things to **operate** — including the explicit possibility that the goal itself is wrong and discovering that is part of the work.
+
+---
+
 ## Anchoring quotes (from 2026-05-22 conversation)
 
 These are kept because they are the ground truth of *why* this project is shaped this way. If a future implementation decision contradicts these, the implementation is wrong, not the quotes.
@@ -219,3 +336,7 @@ These are kept because they are the ground truth of *why* this project is shaped
 > "得定指标然后这个指标或者 metric 是可以换的但是需要 review 的慎重更新, ... goal 可以 progressive 地变更但是要 right bet 和 flexibility 并存" — source of the "Goal evolution as a process-based decision" section. Goals are not pinned at v1; they evolve through the same supervised process that the system uses for trading decisions.
 
 > "claude 确实有作弊率高的问题，但是 review 我认为可以大幅度解决" — acknowledgement of specification gaming as a real risk, and a belief that structured review can contain it. The "Goal evolution" section frames this as `review coverage × independence × quality`, with explicit note that time decay is the failure mode.
+
+> "在 goal 的哲学上我想继续说一个类似的状态机：goal 未完成：再次尝试或者多次尝试积累了语义之后可以调整 goal（因为 goal 可能不合理）（最好有 reviewer 对话讨论）。goal 完成则更新 goal" — source of the "Goal state machine" section. Goals are operated, not just achieved — the possibility that the goal itself is wrong is a first-class operational state.
+
+> "我觉得还有一个核心思路就是实验，你可以使用 subagent 进行实验，来证明证伪你的假设来推进" — source of the subagent-as-prober pattern (commit b49c50a). Subagent dispatch serves two distinct purposes: reviewing decisions (process supervision) and probing hypotheses (epistemic supervision). Both are clean-context tools that bypass the operator's accumulated bias.
