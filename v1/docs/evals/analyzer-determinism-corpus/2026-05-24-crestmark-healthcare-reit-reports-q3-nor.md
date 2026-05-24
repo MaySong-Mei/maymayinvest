@@ -52,9 +52,19 @@ FOR taking action: This is a genuinely strong operating quarter for a healthcare
 
 **Refined reading**: Practitioner-shared concern (no academic anchor) IS sufficient to drive 2/3 trials to unanimity at notify+null + lower confidence (0.58-0.60). But it is NOT sufficient to fully suppress dissent — 1 trial still queues sized intent (Trial 2, `buy 5 dry_run` matched to "small probe sized to info weight"). Compare K=8/K=9 academic-anchored unanimity at 3/3 + conf 0.58-0.62.
 
-**Synthesis between 4-cause and training-prior**: counter-pointing-concern-strength is a CONTINUUM, not binary. Academic-shared anchor → near-full suppression (3/3 unanimous). Practitioner-shared anchor → partial suppression (2/3 unanimous, 1 sized dissent). No anchor → full split (K=1/K=2/K=6 pattern). Neither R1 nor operator's 4-cause taxonomy captured this gradient correctly; both were over-discrete framings of what is actually a strength-graded mechanism.
+~~**Synthesis between 4-cause and training-prior**: counter-pointing-concern-strength is a CONTINUUM, not binary. Academic-shared anchor → near-full suppression (3/3 unanimous). Practitioner-shared anchor → partial suppression (2/3 unanimous, 1 sized dissent). No anchor → full split (K=1/K=2/K=6 pattern). Neither R1 nor operator's 4-cause taxonomy captured this gradient correctly; both were over-discrete framings of what is actually a strength-graded mechanism.~~
 
-**This is the K=10 falsifying finding the eval was designed for.** Both prior framings need revision. The K=10 aggregator analysis will examine this rigorously.
+~~**This is the K=10 falsifying finding the eval was designed for.** Both prior framings need revision.~~ The K=10 aggregator analysis examined this rigorously (see correction block below).
+
+**Correction (2026-05-23, dialogue-reviewer-gated by `a5d1aad491c5e813d` PART 2 spec)**
+
+**Pre-reg-honored conclusion**: R1's training-prior mechanism wins this discrimination cell (n=1 cell; binary decision rule pre-registered above fired SPLIT 2:1, which the rule explicitly maps to R1-wins). Evidence weak at n=1 but design was followed.
+
+The struck-through "Synthesis" paragraph and "falsifying finding" claim above were authored after observing the result and presented the continuum-of-counter-pointing-concern-strength reading as if it were established by K=10. That framing was HARKing-adjacent per K=10 aggregator reviewer `ab623c696b74f9c12` PART 6 #3: it elevated a post-result hypothesis to "finding" without a pre-registered test that could have falsified it on this run.
+
+**Continuum-as-speculative-hypothesis**: The continuum reading (academic > practitioner > none, with corresponding suppression strength 3/3 > 2/3 > 0/3) remains a plausible *post-result hypothesis worth pre-registering*. It is NOT a K=10 finding. To be elevated to finding, it would require its own pre-registered discriminating fixture (e.g., a K=11+ entry whose decision rule cleanly distinguishes "continuum-strength" from "binary academic/non-academic" predictions). Until then, the corpus result is: R1 mechanism beats 4-cause taxonomy on K=10, full stop.
+
+The "Refined reading" paragraph above is also continuum-flavored but stays unstruck because it observes the data (2/3 unanimous, 0.58-0.60 confidence, 1 trial queues sized intent) without elevating the continuum to finding. Reviewer `a5d1aad491c5e813d` PART 2 chose this middle scope; operator concurs.
 
 ## Operator's manual pick
 
@@ -81,7 +91,7 @@ Trial 3 operative-refusal check: contains "the cleanest action right now is NOTI
 ### Disagreement notes (for K=10 aggregator analysis)
 
 - **First v2-epoch SPLIT entry**. Mode 2:1 (2 notify : 1 dry_run+intent). Operator picked the dry_run+intent trial, NOT the notify majority. **This is the test of whether v2 criterion + operator bias counter is meaningful**: prior v2-epoch picks (K=7, K=8, K=9) all unanimous so bias counter untestable. K=10 finally provides an alternative-of-substance test, and operator picked the previously-suppressed-by-v1 mode shape.
-- **Discriminating fixture design SUCCEEDED**: SPLIT observation specifically informs the R1-vs-4-cause dispute. Result favors R1 mechanism (academic-anchored unanimity is special) over operator's 4-cause taxonomy (counter-pointing-alone-suffices). Refined synthesis: counter-pointing-concern-strength is a continuum (academic > practitioner > none) with corresponding suppression-strength (3/3 → 2/3 → 0/3). Both prior framings were over-discrete.
+- **Discriminating fixture design SUCCEEDED**: SPLIT observation specifically informs the R1-vs-4-cause dispute. Result favors R1 mechanism (academic-anchored unanimity is special) over operator's 4-cause taxonomy (counter-pointing-alone-suffices). ~~Refined synthesis: counter-pointing-concern-strength is a continuum (academic > practitioner > none) with corresponding suppression-strength (3/3 → 2/3 → 0/3). Both prior framings were over-discrete.~~ See correction block in "Observed result + discrimination outcome" section above; the continuum reading is post-result speculative hypothesis, not refined synthesis.
 - **Pattern across K=1..10 valid** (updated):
   | K | event | class | mode split | intent_null | conf range | bin | unanimity cause / split shape |
   |---|---|---|---|---|---|---|---|
