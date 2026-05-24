@@ -1,0 +1,19 @@
+{
+  "_fixture_note": "Real-world-shaped 8-K. K=10 discriminating fixture per reviewer adf397ae0a28a7ac6 PART 5 design. Specialty healthcare REIT announces FFO beat + raised guidance + dividend hike (clearly positive headline), paired with disclosed near-term debt maturity tower (~$1.8B in 2025-2026) needing refi at materially higher rates than the existing weighted-average coupon. The counter-pointing concern is market-mechanical (rate environment + maturity schedule, cap-rate-vs-WACC squeeze) and NOT widely-cited-academic-anchored (no Hennes/Leone/Miller-class published pattern named 'refi-tower fades FFO beat'); it is sector-practitioner knowledge. Designed to discriminate: if unanimous, the operator's 4-cause taxonomy wins (any counter-pointing concern suppresses disagreement); if split, R1's shared-training-prior mechanism wins (K=8/K=9 unanimity was specifically academic-shared, not general). Ticker, company, figures illustrative; structure paraphrases how 8-K REIT-earnings filings typically appear. source='manual' marks this as hand-curated.",
+  "form_type": "8-K",
+  "filer": {
+    "cik": "0006781234",
+    "name": "Crestmark Healthcare REIT Inc.",
+    "ticker": "CMHR"
+  },
+  "filed_at": "2024-11-21T07:45:00-05:00",
+  "accepted_at": "2024-11-21T07:45:22-05:00",
+  "items": ["2.02 Results of Operations and Financial Condition", "7.01 Regulation FD Disclosure", "9.01 Financial Statements and Exhibits"],
+  "headline": "Crestmark Healthcare REIT reports Q3 normalized FFO above consensus, raises full-year guidance, increases quarterly dividend 6%",
+  "body": "Crestmark Healthcare REIT Inc. (NYSE: CMHR) today announced financial results for the third quarter ended September 30, 2024. Total revenue was $487 million, an increase of 7.4% year over year, compared to consensus expectations of $471 million. Normalized funds from operations (FFO) per diluted share were $0.94, above consensus expectations of $0.88 and prior-year Q3 of $0.86. Same-property cash net operating income grew 5.1% year over year. Occupancy across the senior-housing operating portfolio increased to 86.7% at quarter-end, from 84.9% in the prior-year quarter. Skilled nursing tenant rent coverage remained stable at 1.6x EBITDARM. The Board of Directors declared a quarterly cash dividend of $0.36 per share, a 6% increase from the prior $0.34, payable on December 30, 2024. The Company raised its full-year fiscal 2024 normalized FFO guidance to a range of $3.68 to $3.74 per share, from the prior range of $3.55 to $3.65 and compared to consensus of $3.62. As a separate disclosure under Item 7.01, the Company reaffirms previously disclosed scheduled debt maturities of approximately $1.83 billion in the 24-month period through December 2026, comprised of a $625 million unsecured term loan maturing March 2025, a $750 million senior unsecured notes maturing November 2025 (5.125% coupon), and a $450 million senior unsecured notes maturing August 2026 (4.875% coupon). The Company expects to refinance these maturities through a combination of unsecured note issuances and credit facility utilization, subject to prevailing market conditions; based on current secondary-market spreads, the Company estimates incremental annualized interest expense in the range of $55 million to $75 million versus the existing weighted-average coupon, partially offset by ongoing FFO growth. Management will host a conference call to discuss the quarterly results today at 9:00 a.m. ET.",
+  "exhibits": [
+    {"type": "EX-99.1", "description": "Press release dated November 21, 2024 (quarterly results and dividend)"},
+    {"type": "EX-99.2", "description": "Quarterly supplemental information package"}
+  ],
+  "filing_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0006781234&type=8-K"
+}
