@@ -125,6 +125,14 @@ class DecisionDossier(BaseModel):
     mode: str = "dry_run"  # "notify" | "dry_run" | "auto"
     latency_ms: int = 0  # end-to-end CC analysis duration
 
+    # Trial grouping for N-of-1 capture (see proposal
+    # v1/docs/proposals/2026-05-23-aggregator-design-resolver-pattern.md).
+    # Populated at capture time, shared across the N trials for a single event.
+    # Nullable because pre-existing single-trial dossiers remain ungrouped — that
+    # is the correct historical state. New captures populate this from the
+    # capture script.
+    decision_group_id: UUID | None = None
+
     # Trace
     llm_call_ids: list[UUID] = Field(default_factory=list)  # references llm_calls rows
 

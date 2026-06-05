@@ -17,7 +17,7 @@ a real DB would test nothing.
 from __future__ import annotations
 
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
@@ -247,3 +247,71 @@ async def test_build_reviewer_input_omits_actor_and_latency(session):
 async def test_build_reviewer_input_unknown_decision_raises(session):
     with pytest.raises(ValueError, match="not found"):
         await build_reviewer_input(session, uuid4())
+
+
+# ---------- decision_group_id ----------
+# Trial grouping for N-of-1 capture; see proposal
+# v1/docs/proposals/2026-05-23-aggregator-design-resolver-pattern.md.
+
+
+@pytest.mark.asyncio
+async def test_decision_group_id_defaults_to_none(session):
+    """Pre-existing single-trial dossiers stay ungrouped (correct historical
+    state). The field is nullable on the domain model and persists as NULL."""
+    dossier = _make_dossier()
+    assert dossier.decision_group_id is None
+
+    row = await save_dossier(session, dossier)
+    assert row.decision_group_id is None
+
+
+@pytest.mark.asyncio
+async def test_decision_group_id_round_trips(session):
+    """A capture-time-populated group_id round-trips through the persistence
+    layer unchanged."""
+    group_id = uuid4()
+    dossier = _make_dossier(decision_group_id=group_id)
+    assert dossier.decision_group_id == group_id
+
+    row = await save_dossier(session, dossier)
+    assert row.decision_group_id == group_id
+
+
+@pytest.mark.asyncio
+async def test_multiple_dossiers_share_one_group_id(session):
+    """The grouping shape the capture script will produce: N dossiers from one
+    event share a single group_id; querying by group_id finds all N trials."""
+    from sqlalchemy import select
+
+    group_id = uuid4()
+    n_trials = 3
+    dossier_ids = []
+    for _ in range(n_trials):
+        d = _make_dossier(decision_group_id=group_id)
+        await save_dossier(session, d)
+        dossier_ids.append(d.id)
+
+    from app.persistence.models import Decision
+
+    stmt = select(Decision).where(Decision.decision_group_id == group_id)
+    rows = (await session.execute(stmt)).scalars().all()
+    assert len(rows) == n_trials
+    assert {r.id for r in rows} == set(dossier_ids)
+    assert all(isinstance(r.decision_group_id, UUID) for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_decision_group_id_not_in_reviewer_input(session):
+    """Reviewer judges this trial alone, on information-only basis.
+
+    Group context is sibling-trial metadata, not information the analyzer
+    had at decision time. Exposing it would change the reviewer's question
+    from "was this trial's reasoning sound?" to "how does this trial compare
+    to its siblings?" — a different evaluation entirely.
+    """
+    group_id = uuid4()
+    dossier = _make_dossier(decision_group_id=group_id)
+    await save_dossier(session, dossier)
+
+    reviewer_in = await build_reviewer_input(session, dossier.id)
+    assert "decision_group_id" not in reviewer_in

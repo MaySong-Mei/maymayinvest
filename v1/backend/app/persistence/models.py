@@ -192,6 +192,13 @@ class Decision(Base):
     mode: Mapped[str] = mapped_column(String(16), default="dry_run")
     latency_ms: Mapped[int] = mapped_column(BigInteger, default=0)
 
+    # Trial grouping for N-of-1 capture; shared across the N trials of one
+    # event. Nullable: pre-existing single-trial dossiers remain ungrouped.
+    # See proposal v1/docs/proposals/2026-05-23-aggregator-design-resolver-pattern.md.
+    decision_group_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), index=True, nullable=True
+    )
+
 
 class Review(Base):
     """Reviewer's judgment on a Decision. Outcome-blind by construction

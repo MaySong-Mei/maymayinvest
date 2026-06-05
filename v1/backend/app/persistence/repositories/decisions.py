@@ -58,6 +58,7 @@ async def save_dossier(session: AsyncSession, dossier: DecisionDossier) -> Decis
         proposed=dossier.proposed.model_dump(mode="json"),
         mode=dossier.mode,
         latency_ms=dossier.latency_ms,
+        decision_group_id=dossier.decision_group_id,
     )
     session.add(row)
     await session.flush()
